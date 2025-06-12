@@ -17,6 +17,7 @@ import pingouin as pg
 
 # Paths
 path_in = "/mnt/data_dump/pixelcheck/pixelcheck_ratings/"
+path_out = "/mnt/data_dump/pixelcheck/"
 
 # Subjects
 subject_list = list(
@@ -56,6 +57,9 @@ for subject in subject_list:
         rating_trial_nr, rating_values = float(rating[0]), [
             float(x) for x in rating[1:]
         ]
+        
+        # Get position in block
+        position_in_block = np.mod(rating_trial_nr, 120)
 
         # Get block nr
         block_nr = trial_list[trial_list[:, 0] == rating_trial_nr, 1][0]
@@ -69,6 +73,7 @@ for subject in subject_list:
                 "id": float(subject),
                 "trial_nr": rating_trial_nr,
                 "block_nr": block_nr - 1,
+                "position_in_block": position_in_block,
                 "ma_cond": ma_cond,
                 "focus": rating_values[0],
                 "self": rating_values[1],
@@ -83,28 +88,52 @@ df = pd.DataFrame(df)
 # Remove block 0 and 1 (practice and fist neutral)
 df = df[~df["block_nr"].isin([0, 1])]
 
+# Remove ratings from first 40 trials
+df = df[df["position_in_block"] > 40]
+
 # Rename values
 df["ma_cond"] = df["ma_cond"].replace({1: "neutral", 2: "self", 3: "other"})
 
+# Average topo df across ids
+df = df.groupby(["id", "ma_cond"])["focus", "self", "computer", "performance"].mean().reset_index()
 
-# Long format with confidence self versus other
+
+# Long format with satisfaction self versus other
 df_long = pd.melt(
     df,
     id_vars=["id", "ma_cond"],
     value_vars=["self", "computer"],
-    var_name="confidence",
+    var_name="satisfaction",
     value_name="rating",
 )
 
-sns.lineplot(data=df_long, x="ma_cond", y="rating", hue="confidence", estimator="mean")
-plt.title("Lineplot of dv1 and dv2 by ma_cond")
+
+# Set the figure size (30x30 cm converted to inches: 1 inch = 2.54 cm)
+fig, ax = plt.subplots(figsize=(30 / 2.54, 30 / 2.54))
+
+
+# Create the lineplot
+sns.lineplot(data=df_long, x="ma_cond", y="rating", hue="satisfaction", estimator="mean", ax=ax)
+
+# Set title
+ax.set_title("satisfaction with own versus computer performance")
+
+# Optional: Tweak other elements if needed
+ax.set_xlabel("feedback condition")
+ax.set_ylabel("Rating")
+
+# Show the plot
+plt.tight_layout()
 plt.show()
 
+# Save the figure with high DPI
+fn = os.path.join(path_out, "ratings.png")
+fig.savefig(fn, dpi=600) 
 
 # Repeated-measures ANOVA
 aov = pg.rm_anova(
     dv="rating",
-    within=["ma_cond", "confidence"],
+    within=["ma_cond", "satisfaction"],
     subject="id",
     data=df_long,
     detailed=True,
