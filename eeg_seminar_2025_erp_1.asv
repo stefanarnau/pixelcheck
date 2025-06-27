@@ -1,0 +1,180 @@
+
+
+% Clear residuals
+clear all;
+
+% Set path variables
+PATH_IN = '/mnt/data_fast/pixelcheck/data_preprocessed/';
+PATH_OUT = '/mnt/data_fast/pixelcheck/figures/';
+PATH_EEGLAB = '/home/plkn/eeglab2025.0.0/';
+
+% Initialize EEGLab
+addpath(PATH_EEGLAB);
+eeglab;
+
+% Get list of files
+infiles = dir(fullfile(PATH_IN, '*.set'));
+
+% An erp matrix
+erp = [];
+id_strings = {};
+
+% Loop files
+for fl = 1 : numel(infiles)
+   
+    % Get filename
+    fn = infiles(fl).name;
+
+    % Get id
+    id_strings{fl} = fn(regexp(fn, '\d'));
+
+    % Load data
+    EEG = pop_loadset('filename', fn, 'filepath', PATH_IN, 'loadmode', 'all');
+
+    % Trials aus Blöcken 2–12 behalten
+    idx_keep = EEG.trialinfo.block_nr >= 2;
+    EEG.data = EEG.data(:, :, idx_keep);
+    EEG.trialinfo = EEG.trialinfo(idx_keep, :);
+    EEG.trials = sum(idx_keep);
+
+    % Code trialnumber in block
+    EEG.trialinfo.trial_in_block = mod(EEG.trialinfo.trial_nr, 120);
+    EEG.trialinfo.trial_in_block(EEG.trialinfo.trial_in_block == 0) = 120;
+    
+    % Exclude first trials in block
+    idx_keep = EEG.trialinfo.trial_in_block > 40;
+    EEG.data = EEG.data(:, :, idx_keep);
+    EEG.trialinfo = EEG.trialinfo(idx_keep, :);
+    EEG.trials = sum(idx_keep);
+
+    % Get condition idx
+    idx_neu_lo = EEG.trialinfo.reward_condition == 0 & EEG.trialinfo.ma_condition == 1;
+    idx_neu_hi = EEG.trialinfo.reward_condition == 1 & EEG.trialinfo.ma_condition == 1;
+    idx_slf_lo = EEG.trialinfo.reward_condition == 0 & EEG.trialinfo.ma_condition == 2;
+    idx_slf_hi = EEG.trialinfo.reward_condition == 1 & EEG.trialinfo.ma_condition == 2;
+    idx_oth_lo = EEG.trialinfo.reward_condition == 0 & EEG.trialinfo.ma_condition == 3;
+    idx_oth_hi = EEG.trialinfo.reward_condition == 1 & EEG.trialinfo.ma_condition == 3;
+
+    % Calculate erps
+    erp(fl, 1, :, :) = mean(squeeze(EEG.data(:, :, idx_neu_lo)), 3);
+    erp(fl, 2, :, :) = mean(squeeze(EEG.data(:, :, idx_neu_hi)), 3);
+    erp(fl, 3, :, :) = mean(squeeze(EEG.data(:, :, idx_slf_lo)), 3);
+    erp(fl, 4, :, :) = mean(squeeze(EEG.data(:, :, idx_slf_hi)), 3);
+    erp(fl, 5, :, :) = mean(squeeze(EEG.data(:, :, idx_oth_lo)), 3);
+    erp(fl, 6, :, :) = mean(squeeze(EEG.data(:, :, idx_oth_hi)), 3);
+
+end % End file loop
+
+% Plot average ERPs for single subjects. Compare to Grand Average.
+ch_nums = [17, 60, 64, 16];
+for ch_idx = 1 : length(ch_nums) 
+
+    ch_num = ch_nums(ch_idx);
+    figure()
+    for n = 1 : 10
+    
+        subplot(4, 3, n)
+        plot(EEG.times, mean(squeeze(erp(n, :, ch_num, :)), 1))
+        xline([0, 1500])
+        title(['Average ERP subject ', id_strings{n}])
+    end
+    sgtitle(['ERP at ', EEG.chanlocs(ch_num).labels]);
+    
+    subplot(4, 3, 11)
+    plot(EEG.times, squeeze(mean(erp(:, :, 63, :), [1, 2])))
+    xline([0, 1500])
+    title(['Grand Average ERP'])
+
+end
+
+% Plot condition ERPs for single subjects. Compare to Grand Average.
+ch_nums = [17, 60, 64, 16];
+for ch_idx = 1 : length(ch_nums) 
+
+    ch_num = ch_nums(ch_idx);
+    figure()
+    for n = 1 : 10
+    
+        subplot(4, 3, n)
+        plot(EEG.times, squeeze(erp(n, :, ch_num, :)))
+        xline([0, 1500])
+        title(['Average ERP subject ', id_strings{n}])
+    
+    end
+    sgtitle(['ERP at ', EEG.chanlocs(ch_num).labels]);
+    
+    subplot(4, 3, 11)
+    plot(EEG.times, squeeze(mean(erp(:, :, 63, :), 1)))
+    xline([0, 1500])
+    title(['Grand Average ERP'])
+    legend({'neu low', 'neu high', 'self low', 'self high', 'other low', 'other high'})
+
+end
+
+% Create averages for plotting
+erp_average = squeeze(mean(erp, 1));
+
+% Plot P3 component at Pz
+idx_channel = 17;
+erp_timewin = [1800, 2100];
+erp_average_pz = squeeze(erp_average(:, idx_channel, :));
+figure()
+
+subplot(2, 2, 1)
+plot(EEG.times, mean(erp_average_pz, 1), 'k', 'LineWidth', 2)
+xline([0, 1500])
+ylims = ylim;
+x_patch = [erp_timewin(1), erp_timewin(2), erp_timewin(2), erp_timewin(1)];
+y_patch = [ylims(1), ylims(1), ylims(2), ylims(2)];
+patch(x_patch, y_patch, [1 0.5 0], 'FaceAlpha', 0.3, 'EdgeColor', 'none');
+title(['Grand Average P3'])
+xlim([-200, 2500])
+
+subplot(2, 2, 2)
+idx_time = EEG.times >= erp_timewin(1) & EEG.times <= erp_timewin(2);
+topoplot(squeeze(mean(erp_average(:, :, idx_time), [1, 3])), EEG.chanlocs, 'maplimits', 'maxmin', 'electrodes', 'off', 'emarker2', {idx_channel, '*', 'k', 8, 1});
+colormap('jet')
+title(['Topography'])
+
+subplot(2, 2, 3)
+plot(EEG.times, squeeze(erp_average(:, idx_channel, :)), 'LineWidth', 1.5)
+xline([0, 1500])
+ylims = ylim;
+x_patch = [erp_timewin(1), erp_timewin(2), erp_timewin(2), erp_timewin(1)];
+y_patch = [ylims(1), ylims(1), ylims(2), ylims(2)];
+patch(x_patch, y_patch, [1 0.5 0], 'FaceAlpha', 0.3, 'EdgeColor', 'none');
+title(['Condition ERP P3'])
+xlim([-200, 2500])
+
+subplot(2, 2, 4)
+sub_by_cond_values = squeeze(mean(squeeze(erp(:, :, idx_channel, idx_time)), 3));
+
+factor1_labels = {'neu', 'slf', 'oth'};
+x = 1 : 3;
+
+f2a_idx = [1 3 5];
+f2b_idx = [2 4 6];
+
+% Compute means and stds across subjects (rows)
+mean_f2a = mean(sub_by_cond_values(:, f2a_idx), 1);
+mean_f2b = mean(sub_by_cond_values(:, f2b_idx), 1);
+std_f2a  = std(sub_by_cond_values(:, f2a_idx), 0, 1);
+std_f2b  = std(sub_by_cond_values(:, f2b_idx), 0, 1);
+
+% Plot
+figure;
+hold on;
+
+% Plot Factor 2 = A (e.g., solid line)
+errorbar(x, mean_f2a, std_f2a, '-o', 'LineWidth', 2, 'Color', [0 0.447 0.741]);
+
+% Plot Factor 2 = B (e.g., dashed line)
+errorbar(x, mean_f2b, std_f2b, '--s', 'LineWidth', 2, 'Color', [0.85 0.325 0.098]);
+
+% Aesthetics
+set(gca, 'XTick', x, 'XTickLabel', factor1_labels);
+xlabel('Factor 1');
+ylabel('Mean Value');
+legend({'Factor 2: A', 'Factor 2: B'});
+title('Line Plot for 3x2 Design with Std Error Bars');
+grid on;
