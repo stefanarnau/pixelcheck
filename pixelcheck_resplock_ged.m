@@ -1,20 +1,26 @@
 
 % File path
-PATH_IN = '/mnt/data_dump/pixelcheck_resplock_ged/';
+PATH_IN = '/mnt/data_dump/pixelcheck_resplock_ged/feedback_locked/';
 PATH_EEGLAB = '/home/plkn/eeglab2025.0.0/';
 
 % Init EEGlab
 addpath(PATH_EEGLAB);
 eeglab;
 
-% File name
-fn = 'VP003_cleaned_feedback_tf_.set.set';
+% Get list of files
+file_list = dir(fullfile(PATH_IN, '*.set'));
 
-% Load data
-EEG = pop_loadset('filename', fn, 'filepath', PATH_IN, 'loadmode', 'all');
+% Iterate files
+for f = 1 : length(file_list)
 
-% Set subject string
-subject = 'test_subject';
+    % Get filename
+    fn = file_list(f).name;
+
+    % Load data
+    EEG = pop_loadset('filename', fn, 'filepath', PATH_IN, 'loadmode', 'all');
+
+end
+
 
 % To double precision
 eeg_data = double(EEG.data);
@@ -138,6 +144,12 @@ end
 focuschan = 65;
 template_topo = dists(focuschan, :) / max(dists(focuschan, :)); % Normalize distances
 template_topo = ones(size(template_topo)) - template_topo; % Invert
+
+% Save filter topography
+figure('Visible', 'off'); clf;
+topoplot(template_topo, EEG.chanlocs, 'electrodes', 'off', 'numcontour', 0)
+saveas(gcf, [PATH_IN, 'spatial_filter_topo_template.png']);
+
 
 % Threshold eigenvalues
 thresh_eval_sd = 1; % In sd
