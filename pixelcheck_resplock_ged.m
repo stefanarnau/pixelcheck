@@ -1,8 +1,9 @@
+clear all;
 
 % File path
 PATH_IN = '/mnt/data_dump/pixelcheck_resplock_ged/feedback_locked/';
 PATH_EEGLAB = '/home/plkn/eeglab2025.0.0/';
-PATH_OUT = '/mnt/data_dump/pixelcheck_resplock_ged/ged_calculated_flipped/';
+PATH_OUT = '/mnt/data_dump/pixelcheck_resplock_ged/ged_calculated_flipped_theta/';
 
 % Init EEGlab
 addpath(PATH_EEGLAB);
@@ -63,7 +64,7 @@ for f = 1 : length(file_list)
     idx_flipped = find(EEG.trialinfo.ma_condition > 1 & EEG.trialinfo.fb_correct == 0 & EEG.trialinfo.fb_flipped == 1);
 
     % Find indices of time points 
-    tidx = (times >= 100 & times <= 800);
+    tidx = (times >= 150 & times <= 750);
 
     % Init arrays for trial-specific covariance matrices
     covmats_correct = zeros(length(idx_correct), size(eeg_data, 1), size(eeg_data, 1));
@@ -95,7 +96,7 @@ for f = 1 : length(file_list)
     ave_covmat_flipped = squeeze(mean(covmats_flipped, 1));
 
     % Apply shrinkage regularization to reference matrices
-    g = 0.1;
+    g = 0.2;
     a = mean(eig(ave_covmat_correct));
     ave_covmat_correct = (1 - g) * ave_covmat_correct + g * a * eye(EEG.nbchan);
 
@@ -149,6 +150,7 @@ for f = 1 : length(file_list)
     % Iterate components
     ged_maps = zeros(EEG.nbchan, EEG.nbchan);
     ged_time_series = zeros(EEG.nbchan, length(EEG.times), EEG.trials);
+    ged_time_series_filtered = zeros(EEG.nbchan, length(EEG.times), EEG.trials);
 
     for cmp = 1 : EEG.nbchan
 
@@ -160,55 +162,136 @@ for f = 1 : length(file_list)
         ged_maps(cmp, :) = ged_maps(cmp, :) * sign(ged_maps(cmp, idx));
 
         % Compute time series for component
-        component_time_series = evecs(:, cmp)' * eeg_data_2d;
+        ged_time_series_2d = evecs(:, cmp)' * eeg_data_2d;
+        ged_time_series_filtered_2d = evecs(:, cmp)' * eeg_data_filtered_2d;
+
+        % Compute power for filtered signal
+        ged_time_series_filtered_2d_power = abs(hilbert(ged_time_series_filtered_2d)) .^ 2;
 
         % Reshape time series to 3d
-        ged_time_series(cmp, :, :) = reshape(component_time_series, [length(EEG.times), EEG.trials]);
+        ged_time_series(cmp, :, :) = reshape(ged_time_series_2d, [length(EEG.times), EEG.trials]);
+        ged_time_series_filtered(cmp, :, :) = reshape(ged_time_series_filtered_2d_power, [length(EEG.times), EEG.trials]);
 
     end
 
     % Threshold eigenvalues
-    suprathresh_eval_idx = find(evals > p95_threshold);
+    suprathresh_eval_idx_p95 = find(evals > p95_threshold);
 
-    % Create output struct
-    ged_data = struct();
-    ged_data.subject = subject;
-    ged_data.ged_time_series = ged_time_series;
-    ged_data.ged_maps = ged_maps;
-    ged_data.chanlocs = EEG.chanlocs;
-    ged_data.times = EEG.times;
-    ged_data.trialinfo = EEG.trialinfo;
-    ged_data.p95_threshold = p95_threshold;
-    ged_data.suprathresh_eval_idx = suprathresh_eval_idx;
+    % Threshold eigenvalues
+    thresh_eval_sd = 1; % In sd
+    thresh_eigenvalue = median(evals) + std(evals) * thresh_eval_sd;
+    suprathresh_eval_idx = find(evals > thresh_eigenvalue);  
 
-    % Save output struct
-    save([PATH_OUT, subject, '_ged_data.mat'], 'ged_data')
-
-    % Plot filter topographies
-    figure('Visible', 'off');
-    for cmp = 1 : EEG.nbchan
-        subplot(7, 10, cmp)
-        cmp_topo = ged_maps(cmp, :);
-        topoplot(cmp_topo, EEG.chanlocs, 'electrodes', 'off', 'numcontour', 0);
-        if evals(cmp) > p95_threshold
-            title('*')
-        else
-            title('-')
+    % Determine electrode distances based on cartesian coordinates
+    dists = zeros(EEG.nbchan);
+    cart_coords = [cell2mat({EEG.chanlocs.X})', cell2mat({EEG.chanlocs.Y})', cell2mat({EEG.chanlocs.Z})'];
+    for ch1 = 1 : EEG.nbchan
+        crds1 = cart_coords(ch1, :);
+        len1 = sqrt(sum(crds1 .^ 2));
+        for ch2 = 1 : EEG.nbchan
+            crds2 = cart_coords(ch2, :);
+            len2 = sqrt(sum(crds2 .^ 2));
+            if ch1 == ch2
+                dists(ch1, ch2) = 0;
+            else
+                r = (len1 + len2) / 2; % Estimate sphere radius from len1 and len2
+                theta = acos(dot(crds1, crds2) / (len1 * len2)); % Angle between A & B in radians
+                dists(ch1, ch2) = r * theta; % Arc length = radius * theta
+            end
         end
     end
-    saveas(gcf, [PATH_OUT, 'spatial_filter_topo_' subject '.png']);
 
-    figure('Visible', 'off');
-    subplot(1, 2, 1)
-    plot([1 : nperm], eval_dist, 'm', 'LineWidth', 2)
-    yline(p95_threshold)
-    title('permutation distribution')
-    subplot(1, 2, 2)
-    plot([1:EEG.nbchan], evals, 'r*', 'MarkerSize', 8)
-    yline(p95_threshold)
-    xlim([0, EEG.nbchan + 1])
-    title('eigenspectrum')
-    saveas(gcf, [PATH_OUT, 'eigenspectrum_' subject '.png']);
+    % Create spatial filter template
+    focuschan = 65;
+    template_topo = dists(focuschan, :) / max(dists(focuschan, :)); % Normalize distances
+    template_topo = ones(size(template_topo)) - template_topo; % Invert
+
+    % Find highest similarity in supra-threshold components
+    cmpsim = 0;
+    chosen_cmp = 0;
+    for cmp = 1 : EEG.nbchan
+        if ismember(cmp, suprathresh_eval_idx)
+            tmp_cmp = ged_maps(cmp, :) / max(ged_maps(cmp, :)); % Normalize
+            tmp = corrcoef(tmp_cmp, template_topo);
+            tmp = abs(tmp(1, 2));
+            if tmp > cmpsim
+                cmpsim = tmp;
+                chosen_cmp = cmp;
+            end
+        end	
+    end
+
+    if chosen_cmp ~= 0
+
+        % Get selected component topography
+        cmp_topo = ged_maps(chosen_cmp, :);
+
+        % Save filter topography
+        figure('Visible', 'off'); clf;
+        topoplot(cmp_topo, EEG.chanlocs, 'electrodes', 'off', 'numcontour', 0)
+        saveas(gcf, [PATH_OUT, 'selected_topo_' subject '.png']);
+        
+        % Get selected component signal
+        cmp_time_series = squeeze(ged_time_series(chosen_cmp, :, :));
+        cmp_time_series_filtered = squeeze(ged_time_series_filtered(chosen_cmp, :, :));
+
+        % Create output struct
+        ged_data = struct();
+        ged_data.subject = subject;
+        ged_data.ged_time_series = cmp_time_series;
+        ged_data.ged_time_series_filtered = cmp_time_series_filtered;
+        ged_data.ged_maps = ged_maps;
+        ged_data.times = EEG.times;
+        ged_data.trialinfo = EEG.trialinfo;
+
+        % Save output struct
+        save([PATH_OUT, subject, '_ged_data.mat'], 'ged_data')
+
+        % Plot filter topographies
+        figure('Visible', 'off');
+
+        % Iterate first 5
+        for cmp = 1 : 5
+
+            title_str = '';
+
+            % Plot filter topo
+            subplot(5, 4, (cmp - 1) * 4 + 1)
+            cmp_topo = ged_maps(cmp, :);
+            topoplot(cmp_topo, EEG.chanlocs, 'electrodes', 'off', 'numcontour', 0);
+            if cmp == chosen_cmp
+                title_str = [title_str, 's'];
+            end
+            if evals(cmp) > p95_threshold
+                title_str = [title_str, '*'];
+            end
+            if evals(cmp) > thresh_eigenvalue
+                title_str = [title_str, '+'];
+            end
+            title(title_str)
+
+            % Plot component average
+            subplot(5, 4, (cmp - 1) * 4 + 2)
+            pd = mean(squeeze(ged_time_series(cmp, :, :)), 2);  
+            plot(EEG.times, pd, 'm', 'LineWidth', 1.5)
+
+            % Plot component average theta
+            subplot(5, 4, (cmp - 1) * 4 + 3)
+            pd = mean(squeeze(ged_time_series_filtered(cmp, :, :)), 2);
+            plot(EEG.times, pd, 'm', 'LineWidth', 1.5)
+
+            % Plot eigenspectrum
+            subplot(5, 4, (cmp - 1) * 4 + 4)
+            plot([1:EEG.nbchan], evals, 'm*', 'MarkerSize', 6)
+            yline(p95_threshold, 'k')
+            yline(thresh_eigenvalue, 'g')
+            xlim([0, EEG.nbchan + 1])
+            title('eigenspectrum')
+
+        end
+        saveas(gcf, [PATH_OUT, 'spatial_filter_' subject '.png']);
+
+    end
 
 end
 
