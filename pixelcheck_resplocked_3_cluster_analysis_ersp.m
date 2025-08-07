@@ -15,7 +15,7 @@ addpath(PATH_FIELDTRIP);
 ft_defaults;
 
 % Get list of files
-file_list = dir(fullfile(PATH_IN, '*ersps.mat'));
+file_list = dir(fullfile(PATH_TF_DATA, '*ersps.mat'));
 
 % Load metadata
 load([PATH_TF_DATA, 'chanlocs.mat']);
@@ -54,7 +54,7 @@ for s = 1 : n_subjects
     id_string = regexp(file_list(s).name, '\d+', 'match'); 
 
     % Load
-    load([PATH_TF_DATA, id_string, '_ersps.mat']); % cond x chan x freq x time
+    load([PATH_TF_DATA, id_string{1}, '_ersps.mat']); % cond x chan x freq x time
 
     % Compute difference ersps for error monitoring
     em_slf_lo = squeeze(ersps(1, :, :, :)) - squeeze(ersps(5, :, :, :));
@@ -187,7 +187,7 @@ cfg                 = [];
 cfg.layout          = layout;
 cfg.feedback        = 'no';
 cfg.method          = 'triangulation'; 
-cfg.neighbours      = ft_prepare_neighbours(cfg, GA_ersp_neu);
+cfg.neighbours      = ft_prepare_neighbours(cfg, GA_tf_em_slf);
 neighbours          = cfg.neighbours;
 
 % Testparams
@@ -197,14 +197,14 @@ nperm       = 1000;
 
 % Set config. Same for all tests
 cfg = [];
-cfg.tail             = 1;
-cfg.statistic        = 'depsamplesFmultivariate';
+cfg.tail             = 0;
+cfg.statistic        = 'depsamplesT';
 cfg.alpha            = testalpha;
 cfg.neighbours       = neighbours;
 cfg.minnbchan        = 2;
 cfg.method           = 'montecarlo';
 cfg.correctm         = 'cluster';
-cfg.clustertail      = 1;
+cfg.clustertail      = 0;
 cfg.clusteralpha     = voxelalpha;
 cfg.clusterstatistic = 'maxsum';
 cfg.numrandomization = nperm;
