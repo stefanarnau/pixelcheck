@@ -9,9 +9,8 @@ Created on Fri Feb 28 16:27:06 2025
 # Imports
 import os
 import pandas as pd
-import numpy as np
 import seaborn as sns
-import matplotlib.pyplot as plt
+import numpy as np
 
 # Paths
 path_in = "/mnt/data_dump/pixelcheck/1_behavioral_data/"
@@ -20,6 +19,19 @@ path_out = "/mnt/data_dump/pixelcheck/"
 # Load data
 fn = os.path.join(path_in, "behavioral_data.csv")
 df = pd.read_csv(fn)
+
+# Check for outlier rts
+df['rt_flag'] = np.where(df['rt'] > 1200, 1, 0)
+
+# Summarize for subjects
+df_outlier = df.groupby(["id"])[["rt_flag"]].sum().reset_index()
+
+# Identify subjects to remove
+outlier_id = df_outlier.id[df_outlier.rt_flag > 10].values
+
+# Remove outlier 
+df = df[~df['id'].isin(outlier_id)]
+
 
 rows = []
 

@@ -14,6 +14,8 @@ subject_list = {'VP001', 'VP003', 'VP004', 'VP005', 'VP006', 'VP007', 'VP009', '
                 'VP022', 'VP023', 'VP024', 'VP025', 'VP026', 'VP027', 'VP028', 'VP029', 'VP030', 'VP0301', ...
                 'VP032', 'VP033_1', 'VP034', 'VP035', 'VP036', 'VP037', 'VP038', 'VP041'};
 
+subject_list = {'VP004'};
+
 % Init result array
 behavioral_data = [];
 behav_counter = 0;
@@ -143,7 +145,7 @@ for s = 1 : length(subject_list)
         
     % Make table
     trialinfo = array2table(trialinfo, 'VariableNames', {'id','trial_nr','block_nr','reward_cue','reward_condition','cue_target_latency','correct_key_color','ma_condition','fb_correct','fb_flipped', 'last_fb_flipped','accuracy','rt'});
-
+    aa=bb
     % Code trialnumber in block
     trialinfo.trial_in_block = mod(trialinfo.trial_nr, 120);
     trialinfo.trial_in_block(trialinfo.trial_in_block == 0) = 120;
