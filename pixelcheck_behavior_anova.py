@@ -151,12 +151,70 @@ sns.relplot(
 plt.show()
 
 
-# ANOVA
-anova_results_rt = pg.rm_anova(dv='rt_mean', within=['agency', 'reward'], subject='id', data=df_grouped, detailed=True)
-anova_results_acc = pg.rm_anova(dv='accuracy', within=['agency', 'reward'], subject='id', data=df_grouped, detailed=True)
-anova_results_drift_rate = pg.rm_anova(dv='drift_rate', within=['agency', 'reward'], subject='id', data=df_grouped, detailed=True)
-anova_results_boundary_seperation = pg.rm_anova(dv='boundary_seperation', within=['agency', 'reward'], subject='id', data=df_grouped, detailed=True)
-anova_results_non_decision_time = pg.rm_anova(dv='non_decision_time', within=['agency', 'reward'], subject='id', data=df_grouped, detailed=True)
+
+# Define your dependent variables
+dvs = ['rt_mean', 'accuracy', 'drift_rate', 'boundary_seperation', 'non_decision_time']
+
+anova_results_all = []
+posthoc_results_all = []
+
+for dv in dvs:
+    
+    # rm ANOVA
+    anova_res = pg.rm_anova(dv=dv,
+                            within=['agency', 'reward'],
+                            subject='id',
+                            data=df_grouped,
+                            detailed=True)
+    anova_res['DV'] = dv
+    anova_results_all.append(anova_res)
+
+    # Check for significant main effect of agency
+    sig_agency = (anova_res.loc[anova_res['Source'] == 'agency', 'p-GG-corr'] < 0.05).any()
+    if sig_agency:
+        post_agency = pg.pairwise_ttests(dv=dv,
+                                         within='agency',
+                                         subject='id',
+                                         data=df_grouped,
+                                         padjust='bonf',
+                                         effsize='cohen')
+        post_agency['DV'] = dv
+        post_agency['Effect'] = 'agency'
+        posthoc_results_all.append(post_agency)
+
+    # Check for significant interaction
+    sig_interaction = (anova_res.loc[anova_res['Source'] == 'agency * reward', 'p-GG-corr'] < 0.05).any()
+    if sig_interaction:
+        
+        # Simple effects: agency within each reward
+        for rw in df_grouped['reward'].unique():
+            simple_agency = pg.pairwise_ttests(dv=dv,
+                                               within='agency',
+                                               subject='id',
+                                               data=df_grouped[df_grouped['reward'] == rw],
+                                               padjust='bonf',
+                                               effsize='cohen')
+            simple_agency['DV'] = dv
+            simple_agency['Effect'] = f'agency_within_reward_{rw}'
+            posthoc_results_all.append(simple_agency)
+
+        # Simple effects: reward within each agency
+        for ag in df_grouped['agency'].unique():
+            simple_reward = pg.pairwise_ttests(dv=dv,
+                                               within='reward',
+                                               subject='id',
+                                               data=df_grouped[df_grouped['agency'] == ag],
+                                               padjust='bonf',
+                                               effsize='cohen')
+            simple_reward['DV'] = dv
+            simple_reward['Effect'] = f'reward_within_agency_{ag}'
+            posthoc_results_all.append(simple_reward)
+
+# Combine into dataframes
+anova_results_df = pd.concat(anova_results_all, ignore_index=True)
+posthoc_results_df = pd.concat(posthoc_results_all, ignore_index=True) if posthoc_results_all else pd.DataFrame()
+
+
 
 
 

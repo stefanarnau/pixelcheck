@@ -8,7 +8,6 @@ Created on Fri Feb 28 16:27:06 2025
 
 # Imports
 import os
-import re
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -20,11 +19,44 @@ path_in = "/mnt/data_dump/pixelcheck/pixelcheck_ratings/"
 path_out = "/mnt/data_dump/pixelcheck/"
 
 # Subjects
-subject_list = list(
-    set(
-        [f[:3] for f in os.listdir(path_in) if os.path.isfile(os.path.join(path_in, f))]
-    )
-)
+subject_list = [
+    "001",
+    "003",
+    "005",
+    "006",
+    "007",
+    "009",
+    "010",
+    "011",
+    "012",
+    "013",
+    "013",
+    "014",
+    "015",
+    "016",
+    "017",
+    "018",
+    "019",
+    "020",
+    "021",
+    "022",
+    "023",
+    "024",
+    "026",
+    "027",
+    "028",
+    "029",
+    "030",
+    "031",
+    "032",
+    "033",
+    "034",
+    "035",
+    "036",
+    "037",
+    "038",
+    "041",
+]
 
 # Loop subjects
 df = []
@@ -57,7 +89,7 @@ for subject in subject_list:
         rating_trial_nr, rating_values = float(rating[0]), [
             float(x) for x in rating[1:]
         ]
-        
+
         # Get position in block
         position_in_block = np.mod(rating_trial_nr, 120)
 
@@ -85,18 +117,80 @@ for subject in subject_list:
 # Create dataframe
 df = pd.DataFrame(df)
 
-# Remove block 0 and 1 (practice and fist neutral)
-df = df[~df["block_nr"].isin([0, 1])]
+# Remove block 0
+df = df[~df["block_nr"].isin([0])]
 
 # Remove ratings from first 40 trials
-df = df[df["position_in_block"] > 40]
+#df = df[df["position_in_block"] > 40]
 
 # Rename values
 df["ma_cond"] = df["ma_cond"].replace({1: "neutral", 2: "self", 3: "other"})
 
-# Average topo df across ids
-df = df.groupby(["id", "ma_cond"])["focus", "self", "computer", "performance"].mean().reset_index()
+#
+df = (
+    df.groupby(["id", "ma_cond"])[["focus", "self", "computer", "performance"]]
+    .mean()
+    .reset_index()
+)
 
+df['SELF'] = df['self']
+
+# Repeated-measures ANOVAs for individual ratings
+aov_focus = pg.rm_anova(
+    dv="focus",
+    within=["ma_cond"],
+    subject="id",
+    data=df,
+    detailed=True,
+)
+post_focus = pg.pairwise_tests(dv="focus",
+                                 within='ma_cond',
+                                 subject='id',
+                                 data=df,
+                                 padjust='bonf',
+                                 effsize='cohen')
+
+aov_self = pg.rm_anova(
+    dv="SELF",
+    within=["ma_cond"],
+    subject="id",
+    data=df,
+    detailed=True,
+)
+post_self = pg.pairwise_tests(dv="SELF",
+                                 within='ma_cond',
+                                 subject='id',
+                                 data=df,
+                                 padjust='bonf',
+                                 effsize='cohen')
+
+aov_computer = pg.rm_anova(
+    dv="computer",
+    within=["ma_cond"],
+    subject="id",
+    data=df,
+    detailed=True,
+)
+post_computer = pg.pairwise_tests(dv="computer",
+                                 within='ma_cond',
+                                 subject='id',
+                                 data=df,
+                                 padjust='bonf',
+                                 effsize='cohen')
+
+aov_performance = pg.rm_anova(
+    dv="performance",
+    within=["ma_cond"],
+    subject="id",
+    data=df,
+    detailed=True,
+)
+post_performance = pg.pairwise_tests(dv="performance",
+                                 within='ma_cond',
+                                 subject='id',
+                                 data=df,
+                                 padjust='bonf',
+                                 effsize='cohen')
 
 # Long format with satisfaction self versus other
 df_long = pd.melt(
@@ -113,7 +207,9 @@ fig, ax = plt.subplots(figsize=(30 / 2.54, 30 / 2.54))
 
 
 # Create the lineplot
-sns.lineplot(data=df_long, x="ma_cond", y="rating", hue="satisfaction", estimator="mean", ax=ax)
+sns.lineplot(
+    data=df_long, x="ma_cond", y="rating", hue="satisfaction", estimator="mean", ax=ax
+)
 
 # Set title
 ax.set_title("satisfaction with own versus computer performance")
@@ -128,7 +224,7 @@ plt.show()
 
 # Save the figure with high DPI
 fn = os.path.join(path_out, "ratings.png")
-fig.savefig(fn, dpi=600) 
+fig.savefig(fn, dpi=600)
 
 # Repeated-measures ANOVA
 aov = pg.rm_anova(
@@ -139,4 +235,21 @@ aov = pg.rm_anova(
     detailed=True,
 )
 
-print(aov)
+# Long format with satisfaction self versus other
+df_long_all = pd.melt(
+    df,
+    id_vars=["id", "ma_cond"],
+    value_vars=["focus", "self", "computer", "performance"],
+    var_name="measure",
+    value_name="rating",
+)
+
+
+# Plot measures
+sns.relplot(
+    data=df_long_all,
+    x='ma_cond', y='rating',
+    col='measure',
+    kind='line', col_wrap=3, facet_kws={'sharey': False}
+)
+plt.show()

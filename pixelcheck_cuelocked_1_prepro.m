@@ -12,11 +12,6 @@ subject_list = {'VP001', 'VP003', 'VP004', 'VP005', 'VP006', 'VP007', 'VP009', '
                 'VP022', 'VP023', 'VP024', 'VP025', 'VP026', 'VP027', 'VP028', 'VP029', 'VP030', 'VP0301', ...
                 'VP032', 'VP033_1', 'VP034', 'VP035', 'VP036', 'VP037', 'VP038', 'VP041'};
 
-subject_list = {'VP005', 'VP006', 'VP007', 'VP009', 'VP010', 'VP011', ...)
-                'VP012', 'VP013', 'VP014', 'VP015', 'VP016', 'VP017', 'VP018', 'VP019', 'VP020', 'VP021', ...
-                'VP022', 'VP023', 'VP024', 'VP025', 'VP026', 'VP027', 'VP028', 'VP029', 'VP030', 'VP0301', ...
-                'VP032', 'VP033_1', 'VP034', 'VP035', 'VP036', 'VP037', 'VP038', 'VP041'};
-
 % Initialize EEGLab
 addpath(PATH_EEGLAB);
 eeglab;
@@ -178,51 +173,45 @@ for s = 1 : length(subject_list)
     % Rereference all channels to Common average reference
     EEG = pop_reref(EEG, []);
 
-    % STEP 3: Filter the data ==================================================================================================
-
     % Resampling data for ICA. This is a fork.
-    EEG_ICA = pop_resample(EEG, 200);
+    EEG = pop_resample(EEG, 200);
 
     % Filter the data
-    EEG_ICA = pop_basicfilter(EEG_ICA, 1:EEG_ICA.nbchan, 'Cutoff', [2, 30],    'Design', 'butter', 'Filter', 'bandpass', 'Order', 4);
-
-    % STEP 4: Epoch data ==================================================================================================
+    EEG = pop_basicfilter(EEG, 1:EEG.nbchan, 'Cutoff', [2, 30],    'Design', 'butter', 'Filter', 'bandpass', 'Order', 4);
 
     % Create epochs
-    [EEG_ICA, epoch_idx_tf]  = pop_epoch(EEG_ICA, {'cue'}, [-0.8, 3]);
+    [EEG, epoch_idx_tf]  = pop_epoch(EEG, {'cue'}, [-0.8, 3]);
 
     % Reduce trialinfo
-    EEG_ICA.trialinfo = EEG_ICA.trialinfo(epoch_idx_tf, :);
+    EEG.trialinfo = EEG.trialinfo(epoch_idx_tf, :);
 
     % Remove baseline
-    EEG_ICA = pop_rmbase(EEG_ICA, [-200, 0]);
+    EEG = pop_rmbase(EEG, [-200, 0]);
 
     % Detect and reject bad epochs
-    [EEG_ICA, EEG_ICA.rejected_epochs] = pop_autorej(EEG_ICA, 'nogui', 'on');
+    [EEG, EEG.rejected_epochs] = pop_autorej(EEG, 'nogui', 'on');
 
     % Remove those epochs also from trialinfo
-    EEG_ICA.trialinfo(EEG_ICA.rejected_epochs, :) = [];
-
-    % STEP 5: ICA ==================================================================================================
+    EEG.trialinfo(EEG.rejected_epochs, :) = [];
 
     % Run ICA
-    EEG_ICA = pop_runica(EEG_ICA, 'extended', 1, 'interrupt', 'on', 'PCA', 64 - (length(EEG.chans_rejected_combined) + 2));
+    EEG = pop_runica(EEG, 'extended', 1, 'interrupt', 'on', 'PCA', 64 - (length(EEG.chans_rejected_combined) + 2));
 
     % Run IC Label
-    EEG_ICA = iclabel(EEG_ICA);
+    EEG = iclabel(EEG);
 
     % Define non brain ICs
-    EEG_ICA.nobrainer = find(EEG_ICA.etc.ic_classification.ICLabel.classifications(:, 1) < 0.3 | EEG_ICA.etc.ic_classification.ICLabel.classifications(:, 3) > 0.3);
+    EEG.nobrainer = find(EEG.etc.ic_classification.ICLabel.classifications(:, 1) < 0.3 | EEG.etc.ic_classification.ICLabel.classifications(:, 3) > 0.3);
 
     % STEP 6: Save data ==================================================================================================
 
     % Save data with all ICs
-    pop_saveset(EEG_ICA, 'filename', [num2str(id), '_icset.set'], 'filepath', PATH_ICSET);
+    pop_saveset(EEG, 'filename', [num2str(id), '_icset.set'], 'filepath', PATH_ICSET);
 
     % Remove non-brain components
-    EEG_ICA = pop_subcomp(EEG_ICA, EEG_ICA.nobrainer, 0);
+    EEG = pop_subcomp(EEG, EEG.nobrainer, 0);
 
     % Save data with non-brain ICs removed
-    pop_saveset(EEG_ICA, 'filename', [num2str(id), '_cleaned.set'], 'filepath', PATH_AUTOCLEANED);
+    pop_saveset(EEG, 'filename', [num2str(id), '_cleaned.set'], 'filepath', PATH_AUTOCLEANED);
 
 end % End subject iteration

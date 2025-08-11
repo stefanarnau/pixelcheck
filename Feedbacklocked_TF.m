@@ -14,7 +14,7 @@ clear all;
   PATH_FIRST_PLOTS = '/Users/grote/Library/CloudStorage/OneDrive-ifado.de/Dokumente/MATLAB/Pixelcheck/cluster_plots_tf/feedback/';
 
 
-% Subject list (stating the obvious here...)% VP039
+% Subject list 
 subject_list = {'VP001', 'VP003', 'VP004', 'VP005', 'VP006', 'VP007', 'VP009', 'VP010', 'VP011', ...)
                 'VP012', 'VP013', 'VP014', 'VP015', 'VP016', 'VP017', 'VP018', 'VP019', 'VP020', 'VP021', ...
                 'VP022', 'VP023', 'VP024', 'VP025', 'VP026', 'VP027', 'VP028', 'VP029', 'VP030', 'VP031', ...
