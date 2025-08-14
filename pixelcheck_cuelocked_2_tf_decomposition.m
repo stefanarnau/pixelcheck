@@ -73,8 +73,8 @@ for s = 1 : length(file_list)
 
     % Result struct
     chanlocs = EEG.chanlocs;
-    ersps = zeros(12, EEG.nbchan, length(tf_freqs), length(tf_times));
-    itpcs = zeros(12, EEG.nbchan, length(tf_freqs), length(tf_times));
+    ersps = zeros(6, EEG.nbchan, length(tf_freqs), length(tf_times));
+    itpcs = zeros(6, EEG.nbchan, length(tf_freqs), length(tf_times));
 
     % Load data
     EEG = pop_loadset('filename', file_list(s).name, 'filepath', PATH_IN, 'loadmode', 'all');
