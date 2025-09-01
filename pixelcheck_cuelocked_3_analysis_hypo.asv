@@ -61,15 +61,10 @@ for s = 1 : n_subjects
 end
 
 % Posterior electrode patch
-idx_channel = [19, 20, 65, 15, 33, 34]; % frontal midline
-%idx_channel = [59, 60]; % sensory
-%idx_channel = [5, 6]; % motor
-
+%idx_channel = [19, 20, 65, 15, 33, 34]; % frontal midline
+idx_channel = [59, 60]; % sensory
 idx_time = tf_times >= 1000 & tf_times <= 1500;
-
-%idx_freq = tf_freqs >= 4 & tf_freqs <= 7; % theta
 idx_freq = tf_freqs >= 8 & tf_freqs <= 12; % alpha
-%idx_freq = tf_freqs >= 16 & tf_freqs <= 30; % beta
 
 % Average across electrodes in patch
 ersps_patch = squeeze(mean(all_ersps(:, :, idx_channel, :, :), 3));
@@ -89,34 +84,27 @@ pd = squeeze(mean(freq_patch, 1));
 plot(tf_times, pd)
 legend({'neulo', 'neuhi', 'slflo', 'slfhi', 'othlo', 'othhi'})
 
-tmp = tf_times(idx_time);
-xRegion = [tmp(1), tmp(end), tmp(end), tmp(1)];
-yRegion = [min(pd(:)), min(pd(:)), max(pd(:)), max(pd(:))];
-h = patch(xRegion, yRegion, 'black');
-set(h, 'FaceAlpha', 0.1, 'EdgeColor', 'none');
-
 % Plot topo
-plotlims = [-max(abs(topovals(:))), max(abs(topovals(:)))];
 figure()
 subplot(3, 2, 1)
-topoplot(topovals(1, :), chanlocs, 'maplimits', plotlims, 'electrodes', 'on', 'style', 'both', 'emarker2', {idx_channel, 'o', 'r', 3, 2});
+topoplot(topovals(1, :), chanlocs, 'maplimits', [-2, 2], 'electrodes', 'on', 'style', 'both', 'emarker2', {idx_channel, 'o', 'r', 3, 2});
 title(['neu lo'])
 subplot(3, 2, 2)
-topoplot(topovals(2, :), chanlocs, 'maplimits', plotlims, 'electrodes', 'on', 'style', 'both', 'emarker2', {idx_channel, 'o', 'r', 3, 2});
+topoplot(topovals(2, :), chanlocs, 'maplimits', [-2, 2], 'electrodes', 'on', 'style', 'both', 'emarker2', {idx_channel, 'o', 'r', 3, 2});
 title(['neu hi'])
 
 subplot(3, 2, 3)
-topoplot(topovals(3, :), chanlocs, 'maplimits', plotlims, 'electrodes', 'on', 'style', 'both', 'emarker2', {idx_channel, 'o', 'r', 3, 2});
+topoplot(topovals(3, :), chanlocs, 'maplimits', [-2, 2], 'electrodes', 'on', 'style', 'both', 'emarker2', {idx_channel, 'o', 'r', 3, 2});
 title(['slf lo'])
 subplot(3, 2, 4)
-topoplot(topovals(4, :), chanlocs, 'maplimits', plotlims, 'electrodes', 'on', 'style', 'both', 'emarker2', {idx_channel, 'o', 'r', 3, 2});
+topoplot(topovals(4, :), chanlocs, 'maplimits', [-2, 2], 'electrodes', 'on', 'style', 'both', 'emarker2', {idx_channel, 'o', 'r', 3, 2});
 title(['slf hi'])
 
 subplot(3, 2, 5)
-topoplot(topovals(5, :), chanlocs, 'maplimits', plotlims, 'electrodes', 'on', 'style', 'both', 'emarker2', {idx_channel, 'o', 'r', 3, 2});
+topoplot(topovals(5, :), chanlocs, 'maplimits', [-2, 2], 'electrodes', 'on', 'style', 'both', 'emarker2', {idx_channel, 'o', 'r', 3, 2});
 title(['oth lo'])
 subplot(3, 2, 6)
-topoplot(topovals(6, :), chanlocs, 'maplimits', plotlims, 'electrodes', 'on', 'style', 'both', 'emarker2', {idx_channel, 'o', 'r', 3, 2});
+topoplot(topovals(6, :), chanlocs, 'maplimits', [-2, 2], 'electrodes', 'on', 'style', 'both', 'emarker2', {idx_channel, 'o', 'r', 3, 2});
 title(['oth hi'])
 
 
@@ -172,18 +160,21 @@ colorbar;
 title(['oth hi'])
 
 
+figure()
+plot(mean(ersps_vals))
+
 
 % Reshape into [subjects × feedback × reward]
 % feedback = 3, reward = 2
 data3d = zeros(n_subjects, 3, 2);
 
 % Fill manually to match your order
-data3d(:,1,1) = ersps_vals(:,1); % neu-lo
-data3d(:,1,2) = ersps_vals(:,2); % neu-hi
-data3d(:,2,1) = ersps_vals(:,3); % slf-lo
-data3d(:,2,2) = ersps_vals(:,4); % slf-hi
-data3d(:,3,1) = ersps_vals(:,5); % oth-lo
-data3d(:,3,2) = ersps_vals(:,6); % oth-hi
+data3d(:,1,1) = data(:,1); % neu-lo
+data3d(:,1,2) = data(:,2); % neu-hi
+data3d(:,2,1) = data(:,3); % slf-lo
+data3d(:,2,2) = data(:,4); % slf-hi
+data3d(:,3,1) = data(:,5); % oth-lo
+data3d(:,3,2) = data(:,6); % oth-hi
 
 % Compute means and standard deviations
 means = squeeze(mean(data3d, 1));   % [feedback × reward]

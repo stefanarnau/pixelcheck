@@ -2,8 +2,8 @@ clear all
 
 % Paths 
 PATH_EEGLAB = '/home/plkn/eeglab2025.0.0/';
-PATH_IN = '/mnt/data_dump/pixelcheck/2_cleaned_resplocked/';
-PATH_TF_DATA = '/mnt/data_dump/pixelcheck/3_tf_data_resplocked/';
+PATH_IN = '/mnt/data_dump/pixelcheck/2_cleaned_cuelocked/';
+PATH_TF_DATA = '/mnt/data_dump/pixelcheck/3_tf_data_cuelocked_1stout/';
 
 % Init EEGlab
 addpath(PATH_EEGLAB);
@@ -65,7 +65,7 @@ for frq = 1 : length(tf_freqs)
 end
 
 % Define time window of analysis
-prune_times = [-500, 1000]; 
+prune_times = [-500, 2500]; 
 tf_times = EEG.times(dsearchn(EEG.times', prune_times(1)) : dsearchn(EEG.times', prune_times(2)));
 
 % Loop subjects
@@ -73,8 +73,8 @@ for s = 1 : length(file_list)
 
     % Result struct
     chanlocs = EEG.chanlocs;
-    ersps = zeros(12, EEG.nbchan, length(tf_freqs), length(tf_times));
-    itpcs = zeros(12, EEG.nbchan, length(tf_freqs), length(tf_times));
+    ersps = zeros(6, EEG.nbchan, length(tf_freqs), length(tf_times));
+    itpcs = zeros(6, EEG.nbchan, length(tf_freqs), length(tf_times));
 
     % Load data
     EEG = pop_loadset('filename', file_list(s).name, 'filepath', PATH_IN, 'loadmode', 'all');
@@ -83,8 +83,24 @@ for s = 1 : length(file_list)
     EEG.trialinfo.trial_in_block = mod(EEG.trialinfo.trial_nr, 120);
     EEG.trialinfo.trial_in_block(EEG.trialinfo.trial_in_block == 0) = 120;
 
+    % Find first blocks of each condition
+    first_1 = 0;
+    first_2 = 0;
+    first_3 = 0;
+    for t = 1 : height(EEG.trialinfo)
+        if EEG.trialinfo.ma_condition(t) == 1 & first_1 == 0
+            first_1 = EEG.trialinfo.block_nr(t);
+        end
+        if EEG.trialinfo.ma_condition(t) == 2 & first_2 == 0
+            first_2 = EEG.trialinfo.block_nr(t);
+        end
+        if EEG.trialinfo.ma_condition(t) == 3 & first_3 == 0
+            first_3 = EEG.trialinfo.block_nr(t);
+        end
+    end
+
     % Set trial exclusion criteria
-    idx_keep = EEG.trialinfo.block_nr >=1;
+    idx_keep = ~ismember(EEG.trialinfo.block_nr, [first_1, first_2, first_3]);
 
     % Exclude trials
     eeg_data = EEG.data(:, :, idx_keep);
@@ -92,39 +108,25 @@ for s = 1 : length(file_list)
     EEG.trials = sum(idx_keep);
 
     % Condition labels
-    cond_label = {'slf err lo', 'slf err hi', 'slf flip lo', 'slf flip hi', 'slf corr lo', 'slf corr hi',...
-                    'oth err lo', 'oth err hi', 'oth flip lo', 'oth flip hi', 'oth corr lo', 'oth corr hi'};
+    cond_label = {'neu lo', 'neu hi', 'slf lo', 'slf hi', 'oth lo', 'oth hi'};
 
     % Loop conditions
     cond_idx = {};
-    for cond = 1 : 12
+    for cond = 1 : 6
         switch cond
             case 1 
-                cond_idx{cond} = trialinfo.ma_condition == 2 & trialinfo.fb_correct == 0 & trialinfo.fb_flipped == 0 & trialinfo.reward_condition == 0;
+                cond_idx{cond} = trialinfo.ma_condition == 1 & trialinfo.reward_condition == 0 & trialinfo.rt <= 1200;
             case 2 
-                cond_idx{cond} = trialinfo.ma_condition == 2 & trialinfo.fb_correct == 0 & trialinfo.fb_flipped == 0 & trialinfo.reward_condition == 1;
+                cond_idx{cond} = trialinfo.ma_condition == 1 & trialinfo.reward_condition == 1 & trialinfo.rt <= 1200;
             case 3
-                cond_idx{cond} = trialinfo.ma_condition == 2 & trialinfo.fb_correct == 0 & trialinfo.fb_flipped == 1 & trialinfo.reward_condition == 0;
+                cond_idx{cond} = trialinfo.ma_condition == 2 & trialinfo.reward_condition == 0 & trialinfo.rt <= 1200;
             case 4
-                cond_idx{cond} = trialinfo.ma_condition == 2 & trialinfo.fb_correct == 0 & trialinfo.fb_flipped == 1 & trialinfo.reward_condition == 1;
+                cond_idx{cond} = trialinfo.ma_condition == 2 & trialinfo.reward_condition == 1 & trialinfo.rt <= 1200;
             case 5
-                cond_idx{cond} = trialinfo.ma_condition == 2 & trialinfo.fb_correct == 1 & trialinfo.reward_condition == 0;
+                cond_idx{cond} = trialinfo.ma_condition == 3 & trialinfo.reward_condition == 0 & trialinfo.rt <= 1200;
             case 6
-                cond_idx{cond} = trialinfo.ma_condition == 2 & trialinfo.fb_correct == 1 & trialinfo.reward_condition == 1;
-            case 7
-                cond_idx{cond} = trialinfo.ma_condition == 3 & trialinfo.fb_correct == 0 & trialinfo.fb_flipped == 0 & trialinfo.reward_condition == 0;
-            case 8
-                cond_idx{cond} = trialinfo.ma_condition == 3 & trialinfo.fb_correct == 0 & trialinfo.fb_flipped == 0 & trialinfo.reward_condition == 1;
-            case 9
-                cond_idx{cond} = trialinfo.ma_condition == 3 & trialinfo.fb_correct == 0 & trialinfo.fb_flipped == 1 & trialinfo.reward_condition == 0;
-            case 10
-                cond_idx{cond} = trialinfo.ma_condition == 3 & trialinfo.fb_correct == 0 & trialinfo.fb_flipped == 1 & trialinfo.reward_condition == 1;
-            case 11
-                cond_idx{cond} = trialinfo.ma_condition == 3 & trialinfo.fb_correct == 1 & trialinfo.reward_condition == 0;
-            case 12
-                cond_idx{cond} = trialinfo.ma_condition == 3 & trialinfo.fb_correct == 1 & trialinfo.reward_condition == 1;
+                cond_idx{cond} = trialinfo.ma_condition == 3 & trialinfo.reward_condition == 1 & trialinfo.rt <= 1200;
         end
-
     end
 
     % Loop channels
@@ -172,7 +174,7 @@ for s = 1 : length(file_list)
         blvals = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
 
         % Loop conditions and calculate ersp and itpc
-        for cond = 1 : 12
+        for cond = 1 : 6
             ersps(cond, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, cond_idx{cond}), 3)), blvals)));
             itpcs(cond, ch, :, :) = single(abs(mean(phacube(:, :, cond_idx{cond}), 3)));
         end

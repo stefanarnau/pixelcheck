@@ -3,7 +3,7 @@ clear all
 % Paths 
 PATH_EEGLAB = '/home/plkn/eeglab2025.0.0/';
 PATH_IN = '/mnt/data_dump/pixelcheck/2_cleaned_resplocked/';
-PATH_TF_DATA = '/mnt/data_dump/pixelcheck/3_tf_data_resplocked/';
+PATH_TF_DATA = '/mnt/data_dump/pixelcheck/3_tf_data_resplocked_1stout/';
 
 % Init EEGlab
 addpath(PATH_EEGLAB);
@@ -83,8 +83,24 @@ for s = 1 : length(file_list)
     EEG.trialinfo.trial_in_block = mod(EEG.trialinfo.trial_nr, 120);
     EEG.trialinfo.trial_in_block(EEG.trialinfo.trial_in_block == 0) = 120;
 
+    % Find first blocks of each condition
+    first_1 = 0;
+    first_2 = 0;
+    first_3 = 0;
+    for t = 1 : height(EEG.trialinfo)
+        if EEG.trialinfo.ma_condition(t) == 1 & first_1 == 0
+            first_1 = EEG.trialinfo.block_nr(t);
+        end
+        if EEG.trialinfo.ma_condition(t) == 2 & first_2 == 0
+            first_2 = EEG.trialinfo.block_nr(t);
+        end
+        if EEG.trialinfo.ma_condition(t) == 3 & first_3 == 0
+            first_3 = EEG.trialinfo.block_nr(t);
+        end
+    end
+
     % Set trial exclusion criteria
-    idx_keep = EEG.trialinfo.block_nr >=1;
+    idx_keep = ~ismember(EEG.trialinfo.block_nr, [first_1, first_2, first_3]);
 
     % Exclude trials
     eeg_data = EEG.data(:, :, idx_keep);
