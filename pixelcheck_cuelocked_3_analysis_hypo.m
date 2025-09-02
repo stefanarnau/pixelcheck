@@ -2,8 +2,8 @@ clear all
 
 % Paths 
 PATH_EEGLAB = '/home/plkn/eeglab2025.0.0/';
-%PATH_TF_DATA = '/mnt/data_dump/pixelcheck/3_tf_data_cuelocked/';
-PATH_TF_DATA = '/mnt/data_dump/pixelcheck/3_tf_data_cuelocked_1stout/';
+PATH_TF_DATA = '/mnt/data_dump/pixelcheck/3_tf_data_cuelocked/';
+%PATH_TF_DATA = '/mnt/data_dump/pixelcheck/3_tf_data_cuelocked_1stout/';
 PATH_TF_RESULTS = '/mnt/data_dump/pixelcheck/4_tf_results_cuelocked/';
 
 % Init EEGlab
@@ -60,16 +60,16 @@ for s = 1 : n_subjects
    
 end
 
+% Set label for analysis
+analysis_label = 'motor_beta';
+
 % Posterior electrode patch
-idx_channel = [19, 20, 65, 15, 33, 34]; % frontal midline
+%idx_channel = [19, 20, 65, 15, 33, 34]; % frontal midline
 %idx_channel = [59, 60]; % sensory
-%idx_channel = [5, 6]; % motor
+idx_channel = [5, 6]; % motor
 
-idx_time = tf_times >= 1000 & tf_times <= 1500;
-
-%idx_freq = tf_freqs >= 4 & tf_freqs <= 7; % theta
-idx_freq = tf_freqs >= 8 & tf_freqs <= 12; % alpha
-%idx_freq = tf_freqs >= 16 & tf_freqs <= 30; % beta
+idx_time = tf_times >= 1200 & tf_times <= 1500;
+idx_freq = tf_freqs >= 16 & tf_freqs <= 30;
 
 % Average across electrodes in patch
 ersps_patch = squeeze(mean(all_ersps(:, :, idx_channel, :, :), 3));
@@ -245,3 +245,29 @@ disp(results_interaction)
 results_simpleReward = multcompare(rm, 'reward', 'By', 'feedback', 'ComparisonType', 'lsd');
 disp('=== Simple effects of REWARD within each FEEDBACK level ===')
 disp(results_simpleReward)
+
+
+
+out_long = [];
+counter = 0;
+for s = 1 : size(ersps_vals, 1)
+    for cond = 1 : size(ersps_vals, 2)
+        counter = counter + 1;
+        if cond <= 2
+            fb = 1;
+        elseif cond <= 4
+            fb = 2;
+        else
+            fb = 3;
+        end
+        if mod(cond, 2) == 1
+            rew = 0;
+        else
+            rew = 1;
+        end
+        out_long(counter, :) = [s, fb, rew, ersps_vals(s, cond)];
+ 
+    end
+end
+fn = [PATH_TF_RESULTS, analysis_label, '.csv'];
+writematrix(out_long, fn);
