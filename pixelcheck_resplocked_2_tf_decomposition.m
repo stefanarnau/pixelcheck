@@ -73,8 +73,8 @@ for s = 1 : length(file_list)
 
     % Result struct
     chanlocs = EEG.chanlocs;
-    ersps = zeros(12, EEG.nbchan, length(tf_freqs), length(tf_times));
-    itpcs = zeros(12, EEG.nbchan, length(tf_freqs), length(tf_times));
+    ersps = zeros(16, EEG.nbchan, length(tf_freqs), length(tf_times));
+    itpcs = zeros(16, EEG.nbchan, length(tf_freqs), length(tf_times));
 
     % Load data
     EEG = pop_loadset('filename', file_list(s).name, 'filepath', PATH_IN, 'loadmode', 'all');
@@ -93,11 +93,12 @@ for s = 1 : length(file_list)
 
     % Condition labels
     cond_label = {'slf err lo', 'slf err hi', 'slf flip lo', 'slf flip hi', 'slf corr lo', 'slf corr hi',...
-                    'oth err lo', 'oth err hi', 'oth flip lo', 'oth flip hi', 'oth corr lo', 'oth corr hi'};
+                  'oth err lo', 'oth err hi', 'oth flip lo', 'oth flip hi', 'oth corr lo', 'oth corr hi',...
+                  'neu err lo', 'neu err hi', 'neu corr lo', 'neu corr hi'};
 
     % Loop conditions
     cond_idx = {};
-    for cond = 1 : 12
+    for cond = 1 : 16
         switch cond
             case 1 
                 cond_idx{cond} = trialinfo.ma_condition == 2 & trialinfo.fb_correct == 0 & trialinfo.fb_flipped == 0 & trialinfo.reward_condition == 0;
@@ -123,8 +124,15 @@ for s = 1 : length(file_list)
                 cond_idx{cond} = trialinfo.ma_condition == 3 & trialinfo.fb_correct == 1 & trialinfo.reward_condition == 0;
             case 12
                 cond_idx{cond} = trialinfo.ma_condition == 3 & trialinfo.fb_correct == 1 & trialinfo.reward_condition == 1;
+            case 13
+                cond_idx{cond} = trialinfo.ma_condition == 1 & trialinfo.fb_correct == 0 & trialinfo.reward_condition == 0;
+            case 14
+                cond_idx{cond} = trialinfo.ma_condition == 1 & trialinfo.fb_correct == 0 & trialinfo.reward_condition == 1;
+            case 15
+                cond_idx{cond} = trialinfo.ma_condition == 1 & trialinfo.fb_correct == 1 & trialinfo.reward_condition == 0;
+            case 16
+                cond_idx{cond} = trialinfo.ma_condition == 1 & trialinfo.fb_correct == 1 & trialinfo.reward_condition == 1;
         end
-
     end
 
     % Loop channels
@@ -172,7 +180,7 @@ for s = 1 : length(file_list)
         blvals = squeeze(mean(tmp(:, blidx1 : blidx2), 2));
 
         % Loop conditions and calculate ersp and itpc
-        for cond = 1 : 12
+        for cond = 1 : 16
             ersps(cond, ch, :, :) = single(10 * log10(bsxfun(@rdivide, squeeze(mean(powcube(:, :, cond_idx{cond}), 3)), blvals)));
             itpcs(cond, ch, :, :) = single(abs(mean(phacube(:, :, cond_idx{cond}), 3)));
         end

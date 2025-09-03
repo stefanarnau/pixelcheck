@@ -82,7 +82,7 @@ outlier_id = df_outlier.id[df_outlier.rt_flag > 10].values
 df = df[~df['id'].isin(outlier_id)]
 
 # Exclude
-df = df[(df.trial_in_block > 0) & (df.block_nr > 3)]
+df = df[(df.trial_in_block > 0)]
 
 # Transform to seconds
 df.rt = df.rt / 1000
@@ -176,7 +176,7 @@ for dv in dvs:
                                          within='agency',
                                          subject='id',
                                          data=df_grouped,
-                                         padjust='bonf',
+                                         padjust='fdr_bh',
                                          effsize='cohen')
         post_agency['DV'] = dv
         post_agency['Effect'] = 'agency'
@@ -192,7 +192,7 @@ for dv in dvs:
                                                within='agency',
                                                subject='id',
                                                data=df_grouped[df_grouped['reward'] == rw],
-                                               padjust='bonf',
+                                               padjust='fdr_bh',
                                                effsize='cohen')
             simple_agency['DV'] = dv
             simple_agency['Effect'] = f'agency_within_reward_{rw}'
@@ -204,7 +204,7 @@ for dv in dvs:
                                                within='reward',
                                                subject='id',
                                                data=df_grouped[df_grouped['agency'] == ag],
-                                               padjust='bonf',
+                                               padjust='fdr_bh',
                                                effsize='cohen')
             simple_reward['DV'] = dv
             simple_reward['Effect'] = f'reward_within_agency_{ag}'
@@ -213,8 +213,6 @@ for dv in dvs:
 # Combine into dataframes
 anova_results_df = pd.concat(anova_results_all, ignore_index=True)
 posthoc_results_df = pd.concat(posthoc_results_all, ignore_index=True) if posthoc_results_all else pd.DataFrame()
-
-
 
 
 

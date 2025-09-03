@@ -61,15 +61,13 @@ for s = 1 : n_subjects
 end
 
 % Set label for analysis
-analysis_label = 'motor_beta';
+analysis_label = 'attentionprep_alpha_frontal';
 
 % Posterior electrode patch
-%idx_channel = [19, 20, 65, 15, 33, 34]; % frontal midline
-%idx_channel = [59, 60]; % sensory
-idx_channel = [5, 6]; % motor
+idx_channel = [15, 33, 34]; % sensory
 
 idx_time = tf_times >= 1200 & tf_times <= 1500;
-idx_freq = tf_freqs >= 16 & tf_freqs <= 30;
+idx_freq = tf_freqs >= 8 & tf_freqs <= 12;
 
 % Average across electrodes in patch
 ersps_patch = squeeze(mean(all_ersps(:, :, idx_channel, :, :), 3));
@@ -172,82 +170,7 @@ colorbar;
 title(['oth hi'])
 
 
-
-% Reshape into [subjects × feedback × reward]
-% feedback = 3, reward = 2
-data3d = zeros(n_subjects, 3, 2);
-
-% Fill manually to match your order
-data3d(:,1,1) = ersps_vals(:,1); % neu-lo
-data3d(:,1,2) = ersps_vals(:,2); % neu-hi
-data3d(:,2,1) = ersps_vals(:,3); % slf-lo
-data3d(:,2,2) = ersps_vals(:,4); % slf-hi
-data3d(:,3,1) = ersps_vals(:,5); % oth-lo
-data3d(:,3,2) = ersps_vals(:,6); % oth-hi
-
-% Compute means and standard deviations
-means = squeeze(mean(data3d, 1));   % [feedback × reward]
-sds   = squeeze(std(data3d, 0, 1)); % [feedback × reward]
-
-% Feedback labels
-feedback_labels = {'neu','slf','oth'};
-
-% Colors for reward levels
-colors = lines(2);  % MATLAB's default distinguishable colors
-
-% Plot
-figure; hold on;
-for r = 1:2
-    errorbar(1:3, means(:,r), sds(:,r), ...
-        '-o', 'Color', colors(r,:), 'MarkerFaceColor', colors(r,:), ...
-        'LineWidth', 1.5, 'CapSize', 8);
-end
-
-% Formatting
-set(gca, 'XTick', 1:3, 'XTickLabel', feedback_labels, 'FontSize', 12);
-xlabel('Feedback'); ylabel('Dependent variable');
-legend({'Reward low','Reward high'}, 'Location','best');
-title('Means ± SD across feedback and reward levels');
-grid on;
-
-
-
-% Put data into a table (needed for fitrm)
-varNames = {'neu_lo','neu_hi','slf_lo','slf_hi','oth_lo','oth_hi'};
-tbl = array2table(ersps_vals, 'VariableNames', varNames);
-
-% Define within-subject factors
-FactorA = [1 1 2 2 3 3]';   % 3 levels
-FactorB = [1 2 1 2 1 2]';   % 2 levels
-withinDesign = table(FactorA, FactorB, ...
-    'VariableNames', {'feedback','reward'});
-
-% Fit repeated measures model
-rm = fitrm(tbl, 'neu_lo-oth_hi ~ 1', 'WithinDesign', withinDesign);
-
-% Run repeated measures ANOVA
-ranovatbl = ranova(rm, 'WithinModel', 'feedback*reward');
-
-disp(ranovatbl)
-
-
-%% Main effect of FEEDBACK (3 levels → 3 comparisons)
-results_feedback = multcompare(rm, 'feedback', 'ComparisonType', 'lsd');
-disp('=== Post hoc pairwise comparisons for FEEDBACK (main effect) ===')
-disp(results_feedback)
-
-%% Interaction: simple effects of FEEDBACK at each REWARD level
-results_interaction = multcompare(rm, 'feedback', 'By', 'reward', 'ComparisonType', 'lsd');
-disp('=== Simple effects of FEEDBACK within each REWARD level ===')
-disp(results_interaction)
-
-%% (Optional) Simple effects of REWARD at each FEEDBACK level
-results_simpleReward = multcompare(rm, 'reward', 'By', 'feedback', 'ComparisonType', 'lsd');
-disp('=== Simple effects of REWARD within each FEEDBACK level ===')
-disp(results_simpleReward)
-
-
-
+% Create output matrix and save (long format)
 out_long = [];
 counter = 0;
 for s = 1 : size(ersps_vals, 1)
