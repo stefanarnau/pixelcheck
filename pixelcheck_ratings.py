@@ -30,7 +30,6 @@ subject_list = [
     "011",
     "012",
     "013",
-    "013",
     "014",
     "015",
     "016",
@@ -147,7 +146,7 @@ post_focus = pg.pairwise_tests(dv="focus",
                                  within='ma_cond',
                                  subject='id',
                                  data=df,
-                                 padjust='bonf',
+                                 padjust='bh',
                                  effsize='cohen')
 
 aov_self = pg.rm_anova(
@@ -161,7 +160,7 @@ post_self = pg.pairwise_tests(dv="SELF",
                                  within='ma_cond',
                                  subject='id',
                                  data=df,
-                                 padjust='bonf',
+                                 padjust='bh',
                                  effsize='cohen')
 
 aov_computer = pg.rm_anova(
@@ -175,7 +174,7 @@ post_computer = pg.pairwise_tests(dv="computer",
                                  within='ma_cond',
                                  subject='id',
                                  data=df,
-                                 padjust='bonf',
+                                 padjust='bh',
                                  effsize='cohen')
 
 aov_performance = pg.rm_anova(
@@ -189,7 +188,7 @@ post_performance = pg.pairwise_tests(dv="performance",
                                  within='ma_cond',
                                  subject='id',
                                  data=df,
-                                 padjust='bonf',
+                                 padjust='bh',
                                  effsize='cohen')
 
 # Long format with satisfaction self versus other

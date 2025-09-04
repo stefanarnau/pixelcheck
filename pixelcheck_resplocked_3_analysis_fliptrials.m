@@ -19,18 +19,22 @@ ft_defaults;
 file_list = dir(fullfile(PATH_TF_DATA, '*ersps.mat'));
     
 % Remember condition labels
-cond_label = {'slf err lo',...
-              'slf err hi',...
-              'slf flip lo',...
-              'slf flip hi',...
-              'slf corr lo',... 
-              'slf corr hi',...
-              'oth err lo',...
-              'oth err hi',...
-              'oth flip lo',...
-              'oth flip hi',...
-              'oth corr lo',...
-              'oth corr hi'};
+condizion_labels = {'slf err lo',...
+                    'slf err hi',...
+                    'slf flip lo',...
+                    'slf flip hi',...
+                    'slf corr lo',... 
+                    'slf corr hi',...
+                    'oth err lo',...
+                    'oth err hi',...
+                    'oth flip lo',...
+                    'oth flip hi',...
+                    'oth corr lo',...
+                    'oth corr hi',...
+                    'neu err lo',...
+                    'neu err hi',...
+                    'neu corr lo',...
+                    'neu corr hi'};
                 
 % Exclude VP4 VP25
 to_exclude = [4, 25];
@@ -55,7 +59,7 @@ load([PATH_TF_DATA, 'tf_freqs.mat']);
 load([PATH_TF_DATA, 'tf_times.mat']);
 
 % Data matrix
-all_ersps = zeros(n_subjects, 12, length(chanlocs), length(tf_freqs), length(tf_times));
+flip_diffs = zeros(n_subjects, 4, length(chanlocs), length(tf_freqs), length(tf_times));
 
 % Loop subjects
 for s = 1 : n_subjects
@@ -66,8 +70,10 @@ for s = 1 : n_subjects
     % Load
     load([PATH_TF_DATA, id_string{1}, '_ersps.mat']); % cond x chan x freq x time
 
-    % Collect
-    all_ersps(s, :, :, :, :) = ersps;
+    flip_diffs(s, 1, :, :, :) = squeeze(ersps(3, :, :, :) - ersps(5, :, :, :));
+    flip_diffs(s, 2, :, :, :) = squeeze(ersps(4, :, :, :) - ersps(6, :, :, :));
+    flip_diffs(s, 3, :, :, :) = squeeze(ersps(9, :, :, :) - ersps(11, :, :, :));
+    flip_diffs(s, 4, :, :, :) = squeeze(ersps(10, :, :, :) - ersps(12, :, :, :));
 
 end % end subject loop
 
@@ -75,13 +81,13 @@ end % end subject loop
 analysis_label = 'fliptrials_frontal_theta';
 
 % Posterior electrode patch
-idx_channel = [65, 15, 19, 20]; % frontal midline
+idx_channel = [65, 15, 19, 20, 16]; % frontal midline
 
-idx_time = tf_times >= 300 & tf_times <= 360;
+idx_time = tf_times >= 300 & tf_times <= 400;
 idx_freq = tf_freqs >= 4 & tf_freqs <= 7;
 
 % Average across electrodes in patch
-ersps_patch = squeeze(mean(all_ersps(:, :, idx_channel, :, :), 3));
+ersps_patch = squeeze(mean(flip_diffs(:, :, idx_channel, :, :), 3));
 
 % Calculate values
 ersps_vals = squeeze(mean(ersps_patch(:, :, idx_freq, idx_time), [3, 4]));
@@ -90,64 +96,59 @@ ersps_vals = squeeze(mean(ersps_patch(:, :, idx_freq, idx_time), [3, 4]));
 freq_patch = squeeze(mean(ersps_patch(:, :, idx_freq, :), 3));
 
 % Get topovals for conditions
-topovals = squeeze(mean(all_ersps(:, :, :, idx_freq, idx_time), [1, 4, 5]));
-
-% The condition labels
-condizion_labels = {'slf err lo', 'slf err hi', 'slf flip lo', 'slf flip hi', 'slf corr lo', 'slf corr hi',...
-                    'oth err lo', 'oth err hi', 'oth flip lo', 'oth flip hi', 'oth corr lo', 'oth corr hi'};
+topovals = squeeze(mean(flip_diffs(:, :, :, idx_freq, idx_time), [1, 4, 5]));
 
 % Plot freqtraces
 figure()
 pd = squeeze(mean(freq_patch, 1));
 plot(tf_times, pd)
-legend(condizion_labels)
+legend({'slf lo', 'slf hi','oth lo', 'oth hi'})
 tmp = tf_times(idx_time);
 xRegion = [tmp(1), tmp(end), tmp(end), tmp(1)];
 yRegion = [min(pd(:)), min(pd(:)), max(pd(:)), max(pd(:))];
 h = patch(xRegion, yRegion, 'black');
 set(h, 'FaceAlpha', 0.1, 'EdgeColor', 'none');
 
-
 % Plot topo
 plotlims = [-max(abs(topovals(:))), max(abs(topovals(:)))];
 figure()
-subplot(3, 3, 1)
-topoplot(topovals(3, :), chanlocs, 'maplimits', plotlims, 'electrodes', 'on', 'style', 'both', 'emarker2', {idx_channel, 'o', 'r', 3, 2});
+subplot(2, 2, 1)
+topoplot(topovals(1, :), chanlocs, 'maplimits', plotlims, 'electrodes', 'on', 'style', 'both', 'emarker2', {idx_channel, 'o', 'r', 3, 2});
 title(['slf lo'])
 
-subplot(3, 3, 2)
-topoplot(topovals(4, :), chanlocs, 'maplimits', plotlims, 'electrodes', 'on', 'style', 'both', 'emarker2', {idx_channel, 'o', 'r', 3, 2});
+subplot(2, 2, 2)
+topoplot(topovals(2, :), chanlocs, 'maplimits', plotlims, 'electrodes', 'on', 'style', 'both', 'emarker2', {idx_channel, 'o', 'r', 3, 2});
 title(['slf hi'])
 
-subplot(3, 3, 4)
-topoplot(topovals(9, :), chanlocs, 'maplimits', plotlims, 'electrodes', 'on', 'style', 'both', 'emarker2', {idx_channel, 'o', 'r', 3, 2});
+subplot(2, 2, 3)
+topoplot(topovals(3, :), chanlocs, 'maplimits', plotlims, 'electrodes', 'on', 'style', 'both', 'emarker2', {idx_channel, 'o', 'r', 3, 2});
 title(['oth lo'])
 
-subplot(3, 3, 5)
-topoplot(topovals(10, :), chanlocs, 'maplimits', plotlims, 'electrodes', 'on', 'style', 'both', 'emarker2', {idx_channel, 'o', 'r', 3, 2});
+subplot(2, 2, 4)
+topoplot(topovals(4, :), chanlocs, 'maplimits', plotlims, 'electrodes', 'on', 'style', 'both', 'emarker2', {idx_channel, 'o', 'r', 3, 2});
 title(['oth hi'])
-
-subplot(3, 3, 3)
-topoplot(topovals(4, :) - topovals(3, :), chanlocs, 'maplimits', plotlims, 'electrodes', 'on', 'style', 'both', 'emarker2', {idx_channel, 'o', 'r', 3, 2});
-title(['slf hi-lo'])
-
-subplot(3, 3, 6)
-topoplot(topovals(10, :) - topovals(9, :), chanlocs, 'maplimits', plotlims, 'electrodes', 'on', 'style', 'both', 'emarker2', {idx_channel, 'o', 'r', 3, 2});
-title(['oth hi-lo'])
-
-subplot(3, 3, 7)
-topoplot(topovals(9, :) - topovals(3, :), chanlocs, 'maplimits', plotlims, 'electrodes', 'on', 'style', 'both', 'emarker2', {idx_channel, 'o', 'r', 3, 2});
-title(['oth-slf in lo'])
-
-subplot(3, 3, 8)
-topoplot(topovals(10, :) - topovals(4, :), chanlocs, 'maplimits', plotlims, 'electrodes', 'on', 'style', 'both', 'emarker2', {idx_channel, 'o', 'r', 3, 2});
-title(['oth-slf in hi'])
 
 
 % Plot tf for conditions
 figure()
 
-subplot(3, 3, 1)
+subplot(2, 2, 1)
+pd = squeeze(mean(squeeze(ersps_patch(:, 1, :, :)), 1));
+contourf(tf_times, tf_freqs, pd, 50, 'linecolor','none')
+colormap('jet')
+set(gca,'clim', [-2, 2], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
+colorbar;
+title(['neu lo'])
+
+subplot(2, 2, 2)
+pd = squeeze(mean(squeeze(ersps_patch(:, 2, :, :)), 1));
+contourf(tf_times, tf_freqs, pd, 50, 'linecolor','none')
+colormap('jet')
+set(gca,'clim', [-2, 2], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
+colorbar;
+title(['neu hi'])
+
+subplot(2, 2, 3)
 pd = squeeze(mean(squeeze(ersps_patch(:, 3, :, :)), 1));
 contourf(tf_times, tf_freqs, pd, 50, 'linecolor','none')
 colormap('jet')
@@ -155,61 +156,13 @@ set(gca,'clim', [-2, 2], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
 colorbar;
 title(['slf lo'])
 
-subplot(3, 3, 2)
+subplot(2, 2, 4)
 pd = squeeze(mean(squeeze(ersps_patch(:, 4, :, :)), 1));
 contourf(tf_times, tf_freqs, pd, 50, 'linecolor','none')
 colormap('jet')
 set(gca,'clim', [-2, 2], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
 colorbar;
 title(['slf hi'])
-
-subplot(3, 3, 4)
-pd = squeeze(mean(squeeze(ersps_patch(:, 9, :, :)), 1));
-contourf(tf_times, tf_freqs, pd, 50, 'linecolor','none')
-colormap('jet')
-set(gca,'clim', [-2, 2], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
-colorbar;
-title(['oth lo'])
-
-subplot(3, 3, 5)
-pd = squeeze(mean(squeeze(ersps_patch(:, 10, :, :)), 1));
-contourf(tf_times, tf_freqs, pd, 50, 'linecolor','none')
-colormap('jet')
-set(gca,'clim', [-2, 2], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
-colorbar;
-title(['oth hi'])
-
-subplot(3, 3, 3)
-pd = squeeze(mean(squeeze(ersps_patch(:, 4, :, :)), 1)) - squeeze(mean(squeeze(ersps_patch(:, 3, :, :)), 1));
-contourf(tf_times, tf_freqs, pd, 50, 'linecolor','none')
-colormap('jet')
-set(gca,'clim', [-2, 2], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
-colorbar;
-title(['slf hi-lo'])
-
-subplot(3, 3, 6)
-pd = squeeze(mean(squeeze(ersps_patch(:, 10, :, :)), 1)) - squeeze(mean(squeeze(ersps_patch(:, 9, :, :)), 1));
-contourf(tf_times, tf_freqs, pd, 50, 'linecolor','none')
-colormap('jet')
-set(gca,'clim', [-2, 2], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
-colorbar;
-title(['oth hi-lo'])
-
-subplot(3, 3, 7)
-pd = squeeze(mean(squeeze(ersps_patch(:, 9, :, :)), 1)) - squeeze(mean(squeeze(ersps_patch(:, 3, :, :)), 1));
-contourf(tf_times, tf_freqs, pd, 50, 'linecolor','none')
-colormap('jet')
-set(gca,'clim', [-2, 2], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
-colorbar;
-title(['oth-slf in lo'])
-
-subplot(3, 3, 8)
-pd = squeeze(mean(squeeze(ersps_patch(:, 10, :, :)), 1)) - squeeze(mean(squeeze(ersps_patch(:, 4, :, :)), 1));
-contourf(tf_times, tf_freqs, pd, 50, 'linecolor','none')
-colormap('jet')
-set(gca,'clim', [-2, 2], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
-colorbar;
-title(['oth-slf in hi'])
 
 % Create output matrix and save (long format)
 out_long = [];
@@ -219,19 +172,19 @@ for s = 1 : size(ersps_vals, 1)
     for cond = 1 : 4
         counter = counter + 1;
         if cond == 1
-            val = ersps_vals(s, 3);
+            val = ersps_vals(s, 1);
             fb = 1; % slf
             rew = 1; % lo
         elseif cond == 2
-            val = ersps_vals(s, 4);
+            val = ersps_vals(s, 2);
             fb = 1; % slf
             rew = 2; % hi
         elseif cond == 3
-            val = ersps_vals(s, 9);
+            val = ersps_vals(s, 3);
             fb = 2; % oth
             rew = 1; % lo
         elseif cond == 4
-            val = ersps_vals(s, 10);
+            val = ersps_vals(s, 4);
             fb = 2; % oth
             rew = 2; % hi
         end
