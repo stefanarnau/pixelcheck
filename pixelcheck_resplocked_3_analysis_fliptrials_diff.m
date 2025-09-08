@@ -4,7 +4,8 @@ clear all
 PATH_EEGLAB = '/home/plkn/eeglab2025.0.0/';
 PATH_FIELDTRIP = '/home/plkn/fieldtrip-master/';
 PATH_TF_DATA = '/mnt/data_dump/pixelcheck/3_tf_data_resplocked/';
-PATH_TF_RESULTS = '/mnt/data_dump/pixelcheck/4_tf_results/';
+%PATH_TF_DATA = '/mnt/data_dump/pixelcheck/3_tf_data_resplocked_1stout/';
+PATH_TF_RESULTS = '/mnt/data_dump/pixelcheck/4_tf_results_resplocked/';
 
 % Init EEGlab
 addpath(PATH_EEGLAB);
@@ -69,10 +70,10 @@ for s = 1 : n_subjects
     % Load
     load([PATH_TF_DATA, id_string{1}, '_ersps.mat']); % cond x chan x freq x time
 
-    flip_diffs(s, 1, :, :, :) = squeeze(ersps(3, :, :, :));
-    flip_diffs(s, 2, :, :, :) = squeeze(ersps(4, :, :, :));
-    flip_diffs(s, 3, :, :, :) = squeeze(ersps(9, :, :, :));
-    flip_diffs(s, 4, :, :, :) = squeeze(ersps(10, :, :, :));
+    flip_diffs(s, 1, :, :, :) = squeeze(ersps(3, :, :, :) - ersps(5, :, :, :));
+    flip_diffs(s, 2, :, :, :) = squeeze(ersps(4, :, :, :) - ersps(6, :, :, :));
+    flip_diffs(s, 3, :, :, :) = squeeze(ersps(9, :, :, :) - ersps(11, :, :, :));
+    flip_diffs(s, 4, :, :, :) = squeeze(ersps(10, :, :, :) - ersps(12, :, :, :));
 
 end % end subject loop
 
@@ -82,7 +83,7 @@ analysis_label = 'fliptrials_frontal_theta';
 % Posterior electrode patch
 idx_channel = [65, 15, 19, 20, 16]; % frontal midline
 
-idx_time = tf_times >= 200 & tf_times <= 400;
+idx_time = tf_times >= 300 & tf_times <= 400;
 idx_freq = tf_freqs >= 4 & tf_freqs <= 7;
 
 % Average across electrodes in patch
