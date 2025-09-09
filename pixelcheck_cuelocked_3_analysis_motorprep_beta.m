@@ -3,7 +3,6 @@ clear all
 % Paths 
 PATH_EEGLAB = '/home/plkn/eeglab2025.0.0/';
 PATH_TF_DATA = '/mnt/data_dump/pixelcheck/3_tf_data_cuelocked/';
-%PATH_TF_DATA = '/mnt/data_dump/pixelcheck/3_tf_data_cuelocked_1stout/';
 PATH_TF_RESULTS = '/mnt/data_dump/pixelcheck/4_tf_results_cuelocked/';
 
 % Init EEGlab

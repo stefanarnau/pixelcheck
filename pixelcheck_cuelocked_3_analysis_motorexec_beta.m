@@ -3,7 +3,7 @@ clear all
 % Paths 
 PATH_EEGLAB = '/home/plkn/eeglab2025.0.0/';
 PATH_TF_DATA = '/mnt/data_dump/pixelcheck/3_tf_data_cuelocked/';
-PATH_TF_RESULTS = '/mnt/data_dump/pixelcheck/4_tf_results/';
+PATH_TF_RESULTS = '/mnt/data_dump/pixelcheck/4_tf_results_cuelocked/';
 
 % Init EEGlab
 addpath(PATH_EEGLAB);
@@ -35,7 +35,7 @@ load([PATH_TF_DATA, 'tf_freqs.mat']);
 load([PATH_TF_DATA, 'tf_times.mat']);
 
 % Prune to cti
-time_idx = tf_times >= -500 & tf_times <= 1800;
+time_idx = tf_times >= -500 & tf_times <= 2500;
 tf_times = tf_times(time_idx);
 
 % Data matrix
@@ -49,10 +49,10 @@ for s = 1 : n_subjects
     id_string = id_string{1};
 
     % Load data
-    load([PATH_TF_DATA, id_string, '_ersps.mat']); % cond x chan x freq x time
+    load([PATH_TF_DATA, id_string, '_itpcs.mat']); % cond x chan x freq x time
 
     % Prune to cti
-    ersps = ersps(:, :, :, time_idx);
+    ersps = itpcs(:, :, :, time_idx);
 
     % Collect
     all_ersps(s, :, :, :, :) = ersps;
@@ -60,13 +60,13 @@ for s = 1 : n_subjects
 end
 
 % Set label for analysis
-analysis_label = 'attentionprep_alpha';
+analysis_label = 'motorprep_beta';
 
 % Posterior electrode patch
-idx_channel = [59, 60]; 
+idx_channel = [18, 9, 10]; % motor
 
-idx_time = tf_times >= 1200 & tf_times <= 1500;
-idx_freq = tf_freqs >= 8 & tf_freqs <= 12;
+idx_time = tf_times >= 1600 & tf_times <= 1800;
+idx_freq = tf_freqs >= 16 & tf_freqs <= 30;
 
 % Average across electrodes in patch
 ersps_patch = squeeze(mean(all_ersps(:, :, idx_channel, :, :), 3));
@@ -124,7 +124,7 @@ subplot(3, 2, 1)
 pd = squeeze(mean(squeeze(ersps_patch(:, 1, :, :)), 1));
 contourf(tf_times, tf_freqs, pd, 50, 'linecolor','none')
 colormap('jet')
-set(gca,'clim', [-2, 2], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
+set(gca,'clim', [-0.5, 0.5], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
 colorbar;
 title(['neu lo'])
 
@@ -132,7 +132,7 @@ subplot(3, 2, 2)
 pd = squeeze(mean(squeeze(ersps_patch(:, 2, :, :)), 1));
 contourf(tf_times, tf_freqs, pd, 50, 'linecolor','none')
 colormap('jet')
-set(gca,'clim', [-2, 2], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
+set(gca,'clim', [-0.5, 0.5], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
 colorbar;
 title(['neu hi'])
 
@@ -140,7 +140,7 @@ subplot(3, 2, 3)
 pd = squeeze(mean(squeeze(ersps_patch(:, 3, :, :)), 1));
 contourf(tf_times, tf_freqs, pd, 50, 'linecolor','none')
 colormap('jet')
-set(gca,'clim', [-2, 2], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
+set(gca,'clim', [-0.5, 0.5], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
 colorbar;
 title(['slf lo'])
 
@@ -148,7 +148,7 @@ subplot(3, 2, 4)
 pd = squeeze(mean(squeeze(ersps_patch(:, 4, :, :)), 1));
 contourf(tf_times, tf_freqs, pd, 50, 'linecolor','none')
 colormap('jet')
-set(gca,'clim', [-2, 2], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
+set(gca,'clim', [-0.5, 0.5], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
 colorbar;
 title(['slf hi'])
 
@@ -156,7 +156,7 @@ subplot(3, 2, 5)
 pd = squeeze(mean(squeeze(ersps_patch(:, 5, :, :)), 1));
 contourf(tf_times, tf_freqs, pd, 50, 'linecolor','none')
 colormap('jet')
-set(gca,'clim', [-2, 2], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
+set(gca,'clim', [-0.5, 0.5], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
 colorbar;
 title(['oth lo'])
 
@@ -164,7 +164,7 @@ subplot(3, 2, 6)
 pd = squeeze(mean(squeeze(ersps_patch(:, 6, :, :)), 1));
 contourf(tf_times, tf_freqs, pd, 50, 'linecolor','none')
 colormap('jet')
-set(gca,'clim', [-2, 2], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
+set(gca,'clim', [-0.5, 0.5], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
 colorbar;
 title(['oth hi'])
 
@@ -193,7 +193,3 @@ for s = 1 : size(ersps_vals, 1)
 end
 fn = [PATH_TF_RESULTS, analysis_label, '.csv'];
 writematrix(out_long, fn);
-
-
-fn = [PATH_TF_RESULTS, 'sample_2d', '.csv'];
-writematrix(pd, fn);
