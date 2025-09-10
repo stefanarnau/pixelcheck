@@ -63,7 +63,7 @@ def ez_diffusion(MRT, VRT, Pc, s = 0.1):
 
 # Paths
 path_in = "/mnt/data_dump/pixelcheck/1_behavioral_data/"
-path_out = "/mnt/data_dump/pixelcheck/"
+path_out =  "/mnt/data_dump/pixelcheck/4_tf_results/"
 
 # Load data
 fn = os.path.join(path_in, "behavioral_data.csv")
@@ -138,6 +138,8 @@ for idx, row in df_grouped.iterrows():
     df_grouped.at[idx, "boundary_seperation"] = a
     df_grouped.at[idx, "non_decision_time"] = t0
     
+# Save df_grouped
+df_grouped.to_csv(os.path.join(path_out, 'behavior.csv'))
 
 df_long = df_grouped.melt(id_vars=["id", "agency", "reward"], var_name='variable', value_name='value')
 

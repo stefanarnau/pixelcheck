@@ -16,7 +16,7 @@ import pingouin as pg
 
 # Paths
 path_in = "/mnt/data_dump/pixelcheck/pixelcheck_ratings/"
-path_out = "/mnt/data_dump/pixelcheck/"
+path_out =  "/mnt/data_dump/pixelcheck/4_tf_results/"
 
 # Subjects
 subject_list = [
@@ -131,6 +131,9 @@ df = (
     .mean()
     .reset_index()
 )
+
+# Save df
+df.to_csv(os.path.join(path_out, 'ratings.csv'))
 
 df['SELF'] = df['self']
 
