@@ -1,0 +1,102 @@
+clear all
+
+% Paths 
+PATH_EEGLAB = '/home/plkn/eeglab2025.0.0/';
+PATH_AUTOCLEANED_ERP = '/mnt/data_dump/pixelcheck/2_cleaned_resplocked_erp/';
+
+% Subject list 
+subject_list = {'VP001', 'VP003', 'VP004', 'VP005', 'VP006', 'VP007', 'VP009', 'VP010', 'VP011', ...)
+                'VP012', 'VP013', 'VP014', 'VP015', 'VP016', 'VP017', 'VP018', 'VP019', 'VP020', 'VP021', ...
+                'VP022', 'VP023', 'VP024', 'VP025', 'VP026', 'VP027', 'VP028', 'VP029', 'VP030', 'VP0301', ...
+                'VP032', 'VP033_1', 'VP034', 'VP035', 'VP036', 'VP037', 'VP038', 'VP041'};
+
+% Initialize EEGLab
+addpath(PATH_EEGLAB);
+eeglab;
+
+% An erp container
+erps = [];
+
+% Iterate subjects
+for s = 1 : length(subject_list)
+
+    % Get id
+    id = str2double(subject_list{s}(3 : 5));
+
+    % Load data
+    EEG = pop_loadset('filename', [num2str(id), '_cleaned.set'], 'filepath', PATH_AUTOCLEANED_ERP, 'loadmode', 'all');
+
+    % correct_key_color:
+    % 0 means even enum, means color2
+    % 1 means odd enum, means color1
+
+    % id:
+    % odd means color1 is right and color1 is blue
+    % even means color1 is right and color1 is yellow
+
+    % color1 is always the right button, color 2 is always the left button
+    % in trialinfo, color1 os coded as 1 and color2 is coded as 0
+
+    % Loop conditions and collect indices of correct trials
+    cond_idx = {};
+    for cond = 1 : 6
+        switch cond
+            case 1 
+                cond_idx{cond} = EEG.trialinfo.ma_condition == 1 & EEG.trialinfo.reward_condition == 0 & EEG.trialinfo.accuracy == 1;
+            case 2 
+                cond_idx{cond} = EEG.trialinfo.ma_condition == 1 & EEG.trialinfo.reward_condition == 1 & EEG.trialinfo.accuracy == 1;
+            case 3
+                cond_idx{cond} = EEG.trialinfo.ma_condition == 2 & EEG.trialinfo.reward_condition == 0 & EEG.trialinfo.accuracy == 1;
+            case 4
+                cond_idx{cond} = EEG.trialinfo.ma_condition == 2 & EEG.trialinfo.reward_condition == 1 & EEG.trialinfo.accuracy == 1;
+            case 5
+                cond_idx{cond} = EEG.trialinfo.ma_condition == 3 & EEG.trialinfo.reward_condition == 0 & EEG.trialinfo.accuracy == 1;
+            case 6
+                cond_idx{cond} = EEG.trialinfo.ma_condition == 3 & EEG.trialinfo.reward_condition == 1 & EEG.trialinfo.accuracy == 1;
+        end
+    end
+
+    % Iterate electrode pairs
+    elec_pairs = {[19, 20], [35, 36], [5, 6]}; % FC1/2, C1/2, C3/4
+    for elp = 1 : numel(elec_pairs)
+
+        % Get electrode indices
+        elec_left = elec_pairs{elp}(1);
+        elec_right = elec_pairs{elp}(2);
+
+        % Loop conditions
+        for cond = 1 : 6
+
+            % Get response side trial indices
+            idx_resp_left = EEG.trialinfo.correct_key_color == 0 & cond_idx{cond};
+            idx_resp_right = EEG.trialinfo.correct_key_color == 1 & cond_idx{cond};
+
+            % Get condition erps
+            erp_left_ipsi = squeeze(mean(EEG.data(elec_left, :, idx_resp_left), [1, 3]));
+            erp_left_contra = squeeze(mean(EEG.data(elec_right, :, idx_resp_left), [1, 3]));
+            erp_right_ipsi = squeeze(mean(EEG.data(elec_right, :, idx_resp_right), [1, 3]));
+            erp_right_contra = squeeze(mean(EEG.data(elec_left, :, idx_resp_right), [1, 3]));
+
+            % Save erps
+            erps(s, elp, cond, 1, 1, :) = erp_left_ipsi;
+            erps(s, elp, cond, 1, 2, :) = erp_left_contra;
+            erps(s, elp, cond, 2, 1, :) = erp_right_ipsi;
+            erps(s, elp, cond, 2, 2, :) = erp_right_contra;
+
+        end % End condition iteration
+    end % End electrode pair iteration
+end % End subject iteration
+
+% Calculate ipsi minus contra
+lrp_both_sides = squeeze(erps(:, :, :, :, 1, :)) - squeeze(erps(:, :, :, :, 2, :));
+
+% Average sides
+lrp_average = squeeze(mean(lrp_both_sides, 4));
+
+% Calculate grand average across subjects
+lrp_ga = squeeze(mean(lrp_average, 1));
+
+
+figure()
+plot(EEG.times, squeeze(lrp_ga(1,:,:)))
+legend()

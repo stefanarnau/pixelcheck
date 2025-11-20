@@ -3,9 +3,8 @@ clear all
 % Paths 
 PATH_EEGLAB = '/home/plkn/eeglab2025.0.0/';
 PATH_RAW = '/mnt/data_dump/pixelcheck/0_eeg/';
-PATH_ICSET = '/mnt/data_dump/pixelcheck/1_icset_resplocked/';
-PATH_AUTOCLEANED = '/mnt/data_dump/pixelcheck/2_cleaned_resplocked/';
-
+PATH_AUTOCLEANED_ERP = '/mnt/data_dump/pixelcheck/2_cleaned_resplocked_erp/';
+PATH_AUTOCLEANED_TF = '/mnt/data_dump/pixelcheck/2_cleaned_resplocked_tf/';
 
 % Subject list 
 subject_list = {'VP001', 'VP003', 'VP004', 'VP005', 'VP006', 'VP007', 'VP009', 'VP010', 'VP011', ...)
@@ -176,49 +175,79 @@ for s = 1 : length(subject_list)
 
     % STEP 3: Filter the data ==================================================================================================
 
-    % Resampling data for ICA. This is a fork.
-    EEG_ICA = pop_resample(EEG, 200);
+    % Resampling data for ICA and TF analyses
+    ERP = EEG;
+    EEG = pop_resample(EEG, 200);
 
     % Filter the data
-    EEG_ICA = pop_basicfilter(EEG_ICA, 1:EEG_ICA.nbchan, 'Cutoff', [2, 30],    'Design', 'butter', 'Filter', 'bandpass', 'Order', 4);
+    ERP = pop_basicfilter(ERP, 1:ERP.nbchan, 'Cutoff', [0.1, 30],    'Design', 'butter', 'Filter', 'bandpass', 'Order', 4);
+    EEG = pop_basicfilter(EEG, 1:EEG.nbchan, 'Cutoff', [2, 30],    'Design', 'butter', 'Filter', 'bandpass', 'Order', 4);
 
     % STEP 4: Epoch data ==================================================================================================
 
+    % Get cuelocked epochs and obtain baseline values
+    [CUE, ~] = pop_epoch(ERP, {'cue'}, [-0.2, 0]);
+    cue_bl_values = squeeze(mean(CUE.data, 2));
+
     % Create epochs
-    [EEG_ICA, epoch_idx_tf]  = pop_epoch(EEG_ICA, {'feedback'}, [-0.8, 1.5]);
+    [ERP, epoch_idx_erp] = pop_epoch(ERP, {'feedback'}, [-1, 1.5]);
+    [EEG, epoch_idx_tf]  = pop_epoch(EEG, {'feedback'}, [-0.8, 1.5]);
 
     % Reduce trialinfo
-    EEG_ICA.trialinfo = EEG_ICA.trialinfo(epoch_idx_tf, :);
+    ERP.trialinfo = ERP.trialinfo(epoch_idx_erp, :);
+    EEG.trialinfo = EEG.trialinfo(epoch_idx_tf, :);
+
+    % Reduce blvalues
+    cue_bl_values = cue_bl_values(:, epoch_idx_erp);
+
+    % Apply cuelocked baseline to response-locked erp data
+    for ch = 1 : CUE.nbchan
+        for e = 1 : CUE.trials
+            ERP.data(ch, :, e) = squeeze(ERP.data(ch, :, e)) - cue_bl_values(ch, e);
+        end
+    end
 
     % Remove baseline
-    EEG_ICA = pop_rmbase(EEG_ICA, [-200, 0]);
+    EEG = pop_rmbase(EEG, [-200, 0]);
 
     % Detect and reject bad epochs
-    [EEG_ICA, EEG_ICA.rejected_epochs] = pop_autorej(EEG_ICA, 'nogui', 'on');
+    [EEG, EEG.rejected_epochs] = pop_autorej(EEG, 'nogui', 'on');
 
     % Remove those epochs also from trialinfo
-    EEG_ICA.trialinfo(EEG_ICA.rejected_epochs, :) = [];
+    EEG.trialinfo(EEG.rejected_epochs, :) = [];
 
     % STEP 5: ICA ==================================================================================================
 
     % Run ICA
-    EEG_ICA = pop_runica(EEG_ICA, 'extended', 1, 'interrupt', 'on', 'PCA', 64 - (length(EEG.chans_rejected_combined) + 2));
+    EEG = pop_runica(EEG, 'extended', 1, 'interrupt', 'on', 'PCA', 64 - (length(EEG.chans_rejected_combined) + 2));
 
     % Run IC Label
-    EEG_ICA = iclabel(EEG_ICA);
+    EEG = iclabel(EEG);
 
     % Define non brain ICs
-    EEG_ICA.nobrainer = find(EEG_ICA.etc.ic_classification.ICLabel.classifications(:, 1) < 0.3 | EEG_ICA.etc.ic_classification.ICLabel.classifications(:, 3) > 0.3);
+    EEG.nobrainer = find(EEG.etc.ic_classification.ICLabel.classifications(:, 1) < 0.3 | EEG.etc.ic_classification.ICLabel.classifications(:, 3) > 0.3);
+
+    % Copy ICs to erpset
+    ERP = pop_editset(ERP, 'icachansind', 'EEG.icachansind', 'icaweights', 'EEG.icaweights', 'icasphere', 'EEG.icasphere');
+    ERP.etc = EEG.etc;
+    ERP.nobrainer = EEG.nobrainer;
+
+    % Remove non-brain components
+    ERP = pop_subcomp(ERP, ERP.nobrainer, 0);
+    EEG = pop_subcomp(EEG, EEG.nobrainer, 0);
+
+    % Detect and reject bad epochs in erp set
+    [ERP, ERP.rejected_epochs] = pop_autorej(ERP, 'nogui', 'on');
+
+    % Remove those epochs also from trialinfo
+    ERP.trialinfo(ERP.rejected_epochs, :) = [];
 
     % STEP 6: Save data ==================================================================================================
 
-    % Save data with all ICs
-    pop_saveset(EEG_ICA, 'filename', [num2str(id), '_icset.set'], 'filepath', PATH_ICSET);
+    % Save erp set
+    pop_saveset(ERP, 'filename', [num2str(id), '_cleaned.set'], 'filepath', PATH_AUTOCLEANED_ERP);
 
-    % Remove non-brain components
-    EEG_ICA = pop_subcomp(EEG_ICA, EEG_ICA.nobrainer, 0);
-
-    % Save data with non-brain ICs removed
-    pop_saveset(EEG_ICA, 'filename', [num2str(id), '_cleaned.set'], 'filepath', PATH_AUTOCLEANED);
+    % Save tf set
+    pop_saveset(EEG, 'filename', [num2str(id), '_cleaned.set'], 'filepath', PATH_AUTOCLEANED_TF);
 
 end % End subject iteration
