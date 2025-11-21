@@ -226,7 +226,7 @@ for s = 1 : length(subject_list)
     % STEP 6: Save data ==================================================================================================
 
     % Save erp set
-    pop_saveset(ERP, 'filename', [num2str(id), '_icset.set'], 'filepath', PATH_AUTOCLEANED_ERP);
+    pop_saveset(ERP, 'filename', [num2str(id), '_cleaned.set'], 'filepath', PATH_AUTOCLEANED_ERP);
 
     % Save tf set
     pop_saveset(EEG, 'filename', [num2str(id), '_cleaned.set'], 'filepath', PATH_AUTOCLEANED_TF);

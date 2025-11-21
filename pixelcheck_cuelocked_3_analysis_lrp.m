@@ -2,7 +2,7 @@ clear all
 
 % Paths 
 PATH_EEGLAB = '/home/plkn/eeglab2025.0.0/';
-PATH_AUTOCLEANED_ERP = '/mnt/data_dump/pixelcheck/2_cleaned_resplocked_erp/';
+PATH_AUTOCLEANED_ERP = '/mnt/data_dump/pixelcheck/2_cleaned_cuelocked_erp/';
 
 % Subject list 
 subject_list = {'VP001', 'VP003', 'VP004', 'VP005', 'VP006', 'VP007', 'VP009', 'VP010', 'VP011', ...)
@@ -24,17 +24,20 @@ for s = 1 : length(subject_list)
     id = str2double(subject_list{s}(3 : 5));
 
     % Load data
-    EEG = pop_loadset('filename', [num2str(id), '_cleaned.set'], 'filepath', PATH_AUTOCLEANED_ERP, 'loadmode', 'all');
+    EEG = pop_loadset('filename', [num2str(id), '_icset.set'], 'filepath', PATH_AUTOCLEANED_ERP, 'loadmode', 'all');
+
+    EEG = pop_rmbase(EEG, [1300, 1500]);
 
     % correct_key_color:
     % 0 means even enum, means color2
     % 1 means odd enum, means color1
 
     % id:
-    % odd means color1 is right and color1 is blue
-    % even means color1 is right and color1 is yellow
 
-    % color1 is always the right button, color 2 is always the left button
+    % odd means yellow left
+    % even means blue left
+
+    % color1 is always the left button, color 2 is always the right button
     % in trialinfo, color1 os coded as 1 and color2 is coded as 0
 
     % Loop conditions and collect indices of correct trials
@@ -57,7 +60,7 @@ for s = 1 : length(subject_list)
     end
 
     % Iterate electrode pairs
-    elec_pairs = {[19, 20], [35, 36], [5, 6]}; % FC1/2, C1/2, C3/4
+    elec_pairs = {[19, 20], [35, 36], [5, 6], [17, 17], [9, 10]}; % FC1/2, C1/2, C3/4 % Pz*2
     for elp = 1 : numel(elec_pairs)
 
         % Get electrode indices
@@ -68,8 +71,8 @@ for s = 1 : length(subject_list)
         for cond = 1 : 6
 
             % Get response side trial indices
-            idx_resp_left = EEG.trialinfo.correct_key_color == 0 & cond_idx{cond};
-            idx_resp_right = EEG.trialinfo.correct_key_color == 1 & cond_idx{cond};
+            idx_resp_left = EEG.trialinfo.correct_key_color == 1 & cond_idx{cond};
+            idx_resp_right = EEG.trialinfo.correct_key_color == 0 & cond_idx{cond};
 
             % Get condition erps
             erp_left_ipsi = squeeze(mean(EEG.data(elec_left, :, idx_resp_left), [1, 3]));
@@ -87,8 +90,14 @@ for s = 1 : length(subject_list)
     end % End electrode pair iteration
 end % End subject iteration
 
+erps_pz = squeeze(erps(:, 4, :, :, :, :));
+erps_pz = squeeze(mean(erps_pz, [1, 3, 4]));
+
+erps_o12 = squeeze(erps(:, 5, :, :, :, :));
+erps_o12 = squeeze(mean(erps_o12, [1, 3, 4]));
+
 % Calculate ipsi minus contra
-lrp_both_sides = squeeze(erps(:, :, :, :, 1, :)) - squeeze(erps(:, :, :, :, 2, :));
+lrp_both_sides = squeeze(erps(:, :, :, :, 2, :)) - squeeze(erps(:, :, :, :, 1, :));
 
 % Average sides
 lrp_average = squeeze(mean(lrp_both_sides, 4));
@@ -96,7 +105,15 @@ lrp_average = squeeze(mean(lrp_both_sides, 4));
 % Calculate grand average across subjects
 lrp_ga = squeeze(mean(lrp_average, 1));
 
+idx_crop = EEG.times >= 1400 & EEG.times <= 1900;
+crop_times = EEG.times(idx_crop);
+erps_o12 = erps_o12(:, idx_crop);
+
 
 figure()
-plot(EEG.times, squeeze(lrp_ga(1,:,:)))
-legend()
+plot(EEG.times, squeeze(lrp_ga(3, :, :)))
+legend({'nlo', 'nhi', 'slo', 'shi', 'olo', 'ohi'})
+
+figure()
+plot(crop_times, erps_o12)
+legend({'nlo', 'nhi', 'slo', 'shi', 'olo', 'ohi'})
