@@ -81,7 +81,7 @@ for s = 1 : length(subject_list)
                 cue_target_latency = EEG.event(e).latency - EEG.event(f).latency;
 
                 % Get correct key color
-                correct_key_color = mod(enum, 2) == 0 + 1;
+                correct_key_color = mod(enum, 2) == 0 + 1; % 
 
                 % Get block number
                 block_nr = ceil(enum / 6) - 1;
@@ -190,8 +190,8 @@ for s = 1 : length(subject_list)
     cue_bl_values = squeeze(mean(CUE.data, 2));
 
     % Create epochs
-    [ERP, epoch_idx_erp] = pop_epoch(ERP, {'feedback'}, [-1, 1.5]);
-    [EEG, epoch_idx_tf]  = pop_epoch(EEG, {'feedback'}, [-0.8, 1.5]);
+    [ERP, epoch_idx_erp] = pop_epoch(ERP, {'feedback'}, [-1, 0.5]);
+    [EEG, epoch_idx_tf]  = pop_epoch(EEG, {'feedback'}, [-1.5, 1]);
 
     % Reduce trialinfo
     ERP.trialinfo = ERP.trialinfo(epoch_idx_erp, :);

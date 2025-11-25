@@ -1,4 +1,4 @@
-function[erp, erp_time, ersp_raw, ersp_db_general, ersp_db_specific, itpc, tf_time, tf_frqs] = get_event_related_averages(EEG, fserp, fstf, cndidx, varargin)
+function[ersp_raw, ersp_db_general, ersp_db_specific, itpc, tf_time, tf_frqs] = get_event_related_tf(EEG, cndidx, varargin)
 
 	%
 	%
@@ -16,12 +16,9 @@ function[erp, erp_time, ersp_raw, ersp_db_general, ersp_db_specific, itpc, tf_ti
 	%
 	% needed: 
 	% EEG              : The EEG struct
-	% t       	       : A vector containing the latencies of a trial (e.g. EEG.times in an epoched dataset)
-	% fs     	       : The sampling rate (e.g. EEG.srate)
     % cndidx           : Trial indices for each condition
     %
 	% optional: 
-	% 'blerp         ' : Latencies to use for the erp baseline. Default is [-200 0].
 	% 'blersp'         : Latencies to use for the ersp baseline. Default is [-500 -200].
 	% 'n_frq     '     : Number of frequencies to use in tf-decomposition. Default is 20.
 	% 'frqrange    '   : Frequency range for tf-decomposition. Default is [3, 30].
@@ -32,8 +29,6 @@ function[erp, erp_time, ersp_raw, ersp_db_general, ersp_db_specific, itpc, tf_ti
 	% OUTPUT ARGUMENTS:
 	% -----------------
 	%	
-	% erp              : The erp matrix as channel x erp
-	% erp_time         : The time vector for erp data.
     % ersp_raw         : The ersp matrix in mV^2 values as channel x frequency x time
 	% ersp_db_general  : The ersp matrix in decibel values using a condition-general baseline as channel x frequency x time
     % ersp_db_specific : The ersp matrix in decibel values using a condition-specific baseline as channel x frequency x time
@@ -42,20 +37,13 @@ function[erp, erp_time, ersp_raw, ersp_db_general, ersp_db_specific, itpc, tf_ti
 	% tf_frqs          : The frequency vector for time-frequency data.
 	%
 	% ------------------------
-	% Stefan Arnau, 27.03.2019
+	% Stefan Arnau, 25.11.2025
 	% ------------------------
-
-	% Check if any input args
-	if nargin < 3
-        error('Not enough input arguments... :)');
-        return;
-	end
 
 	% Init input parser
 	p = inputParser;
 
 	% Set Defaults
-	default_blerp = [-200, 0];
 	default_blersp = [-500, -200];
 	default_n_frq = 20;
 	default_frqrange = [2, 30];
@@ -65,25 +53,19 @@ function[erp, erp_time, ersp_raw, ersp_db_general, ersp_db_specific, itpc, tf_ti
 	p.FunctionName  = mfilename;
 	p.CaseSensitive = false;
 	p.addRequired('EEG', @isstruct);
-	p.addRequired('fserp', @isnumeric);
-    p.addRequired('fstf', @isnumeric);
     p.addRequired('cndidx', @iscell);
-	p.addParamValue('blerp', default_blerp, @isnumeric);
 	p.addParamValue('blersp', default_blersp, @isnumeric);
 	p.addParamValue('n_frq', default_n_frq, @isnumeric);
 	p.addParamValue('frqrange', default_frqrange, @isnumeric);
 	p.addParamValue('fwhmtrange', default_fwhmtrange, @isnumeric);
-    parse(p, EEG, fserp, fstf, cndidx, varargin{:});
+    parse(p, EEG, cndidx, varargin{:});
     
-    % Resample
-    DERP = pop_resample(p.Results.EEG, p.Results.fserp);
-    DTF = pop_resample(p.Results.EEG, p.Results.fstf);
-    pruneidx = dsearchn(DTF.times', [DTF.times(1) + 300, DTF.times(end) - 300]');
+    % Set prune time
+    DTF = EEG;
+    pruneidx = dsearchn(DTF.times', [DTF.times(1) + 500, DTF.times(end) - 500]');
     tf_time = DTF.times(pruneidx(1) : pruneidx(2));
-    erp_time = DERP.times;
 
     % Resmats
-    erp = zeros(length(p.Results.cndidx), EEG.nbchan, size(DERP.data, 2));
     ersp = zeros(length(p.Results.cndidx), EEG.nbchan, p.Results.n_frq, length(tf_time));
     itpc = zeros(length(p.Results.cndidx), EEG.nbchan, p.Results.n_frq, length(tf_time));
 
@@ -92,21 +74,9 @@ function[erp, erp_time, ersp_raw, ersp_db_general, ersp_db_specific, itpc, tf_ti
 
         % If too few trials
         if length(p.Results.cndidx{cnd}) < 3
-
-                erp(cnd, :, :) = nan(EEG.nbchan, size(DERP.data, 2));
                 ersp(cnd, :, :, :) = nan(EEG.nbchan, p.Results.n_frq, length(tf_time));
                 itpc(cnd, :, :, :) = nan(EEG.nbchan, p.Results.n_frq, length(tf_time));
-
         else
-        
-            % Calc erps
-            d = DERP.data(:, :, p.Results.cndidx{cnd});
-            blerpidx = dsearchn(DERP.times', p.Results.blerp');
-            for c = 1 : size(d, 1)
-                fprintf('\ncondition %i/%i | Calculating ERP chan %i/%i...', cnd, length(p.Results.cndidx), c, size(d, 1));
-                erp(cnd, c, :) = mean(bsxfun(@minus, squeeze(d(c, :, :))', mean(squeeze(d(c, blerpidx(1) : blerpidx(2), :))', 2)), 1);
-                fprintf('  done');
-            end
 
             % Set some variables
             d = DTF.data(:, :, p.Results.cndidx{cnd});
