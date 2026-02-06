@@ -52,6 +52,42 @@ posthoc_agency_error_monitoring = pg.pairwise_ttests(
     dv="value", within="agency", subject="id", data=df, padjust="bh", effsize="cohen"
 )
 
+# Error monitoring | frontal theta resplocked diff=====================================
+
+# Load data
+fn = os.path.join(path_in, "error_monitoring_frontal_theta_diff.csv")
+df = pd.read_csv(fn, header=None)
+
+# rename cols and factor levels
+df.columns = ["id", "agency", "reward", "value"]
+df["agency"] = df["agency"].replace({1: "neu", 2: "slf", 3: "oth"})
+df["reward"] = df["reward"].replace({1: "low", 2: "high"})
+df["id"] = df["id"].astype("category")
+
+# Plot measures
+plt_error_monitoring_diff = sns.relplot(
+    data=df,
+    x="reward",
+    y="value",
+    hue="agency",
+    kind="line",
+)
+plt_error_monitoring_diff.fig.subplots_adjust(top=0.9)
+plt_error_monitoring_diff.fig.suptitle("frontal theta error monitoring diff")
+plt.show()
+
+# Anova
+aov_error_monitoring_diff = pg.rm_anova(
+    dv="value",
+    within=["agency", "reward"],
+    subject="id",
+    data=df,
+    detailed=True,
+)
+
+posthoc_agency_error_monitoring_diff = pg.pairwise_ttests(
+    dv="value", within="agency", subject="id", data=df, padjust="bh", effsize="cohen"
+)
 
 # Flip trials | frontal theta resplocked =====================================
 
@@ -79,6 +115,39 @@ plt.show()
 
 # Anova
 aov_flip_trials = pg.rm_anova(
+    dv="value",
+    within=["agency", "reward"],
+    subject="id",
+    data=df,
+    detailed=True,
+)
+
+# Flip trials | frontal theta resplocked diff =====================================
+
+# Load data
+fn = os.path.join(path_in, "fliptrials_frontal_theta_diff.csv")
+df = pd.read_csv(fn, header=None)
+
+# rename cols and factor levels
+df.columns = ["id", "agency", "reward", "value"]
+df["agency"] = df["agency"].replace({1: "slf", 2: "oth"})
+df["reward"] = df["reward"].replace({1: "low", 2: "high"})
+df["id"] = df["id"].astype("category")
+
+# Plot measures
+plt_flip_trials_diff = sns.relplot(
+    data=df,
+    x="reward",
+    y="value",
+    hue="agency",
+    kind="line",
+)
+plt_flip_trials_diff.fig.subplots_adjust(top=0.9)
+plt_flip_trials_diff.fig.suptitle("frontal theta flip trials diff")
+plt.show()
+
+# Anova
+aov_flip_trials_diff = pg.rm_anova(
     dv="value",
     within=["agency", "reward"],
     subject="id",

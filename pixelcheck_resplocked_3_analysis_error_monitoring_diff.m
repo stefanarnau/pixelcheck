@@ -5,7 +5,7 @@ PATH_EEGLAB = '/home/plkn/eeglab2025.0.0/';
 PATH_FIELDTRIP = '/home/plkn/fieldtrip-master/';
 PATH_TF_DATA = '/mnt/data_dump/pixelcheck/3_tf_data_resplocked/';
 %PATH_TF_DATA = '/mnt/data_dump/pixelcheck/3_tf_data_resplocked_1stout/';
-PATH_TF_RESULTS = '/mnt/data_dump/pixelcheck/4_tf_results_resplocked/';
+PATH_TF_RESULTS = '/mnt/data_dump/pixelcheck/4_tf_results/';
 
 % Init EEGlab
 addpath(PATH_EEGLAB);
@@ -80,7 +80,7 @@ for s = 1 : n_subjects
 end % end subject loop
 
 % Set label for analysis
-analysis_label = 'error_monitoring_frontal_theta';
+analysis_label = 'error_monitoring_frontal_theta_diff';
 
 % Posterior electrode patch
 idx_channel = [65, 15, 19, 20, 16]; % frontal midline

@@ -19,6 +19,11 @@ stats_resp = [];
 % Iterate subjects
 for s = 1 : length(file_list_cue)
 
+    % Skip excluded
+    if ismember(str2double(file_list_cue(s).name(1:2)), [4, 25])
+        continue;
+    end
+
     % Load data
     EEG = pop_loadset('filename', file_list_cue(s).name, 'filepath', PATH_AUTOCLEANED_TF_CUE, 'loadmode', 'info');
 
@@ -35,6 +40,11 @@ std(stats_cue, [], 1)
 
 % Iterate subjects
 for s = 1 : length(file_list_resp)
+
+    % Skip excluded
+    if ismember(str2double(file_list_resp(s).name(1:2)), [4, 25])
+        continue;
+    end
 
     % Load data
     EEG = pop_loadset('filename', file_list_resp(s).name, 'filepath', PATH_AUTOCLEANED_TF_RESP, 'loadmode', 'info');
