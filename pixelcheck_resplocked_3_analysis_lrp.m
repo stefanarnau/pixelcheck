@@ -10,6 +10,10 @@ subject_list = {'VP001', 'VP003', 'VP004', 'VP005', 'VP006', 'VP007', 'VP009', '
                 'VP022', 'VP023', 'VP024', 'VP025', 'VP026', 'VP027', 'VP028', 'VP029', 'VP030', 'VP0301', ...
                 'VP032', 'VP033_1', 'VP034', 'VP035', 'VP036', 'VP037', 'VP038', 'VP041'};
 
+exclude = {'VP004','VP025'};
+
+subject_list = setdiff(subject_list, exclude);
+
 % Initialize EEGLab
 addpath(PATH_EEGLAB);
 eeglab;

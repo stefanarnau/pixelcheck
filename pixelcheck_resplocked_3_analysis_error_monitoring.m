@@ -81,7 +81,7 @@ end % end subject loop
 % Set label for analysis
 analysis_label = 'error_monitoring_frontal_theta';
 
-% Posterior electrode patch
+% Frontal electrode patch
 idx_channel = [65, 15, 19, 20, 16]; % frontal midline
 
 idx_time = tf_times >= 50 & tf_times <= 250;

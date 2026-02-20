@@ -11,6 +11,10 @@ subject_list = {'VP001', 'VP003', 'VP004', 'VP005', 'VP006', 'VP007', 'VP009', '
                 'VP022', 'VP023', 'VP024', 'VP025', 'VP026', 'VP027', 'VP028', 'VP029', 'VP030', 'VP0301', ...
                 'VP032', 'VP033_1', 'VP034', 'VP035', 'VP036', 'VP037', 'VP038', 'VP041'};
 
+
+exclude = {'VP004','VP025'};
+subject_list = setdiff(subject_list, exclude);
+
 % Initialize EEGLab
 addpath(PATH_EEGLAB);
 eeglab;
@@ -124,24 +128,42 @@ for s = 1 : length(subject_list)
     end
 end
 
-% Remove subject in position 24
-lat_indices(24, :, :, :, :) = [];
+% Remove subject in position 22 (there are nans...)
+lat_indices(22, :, :, :, :) = [];
 
-idx_frq = tf_frqs > 20;
-lat_indices_mu = squeeze(mean(lat_indices(:, :, :, idx_frq, :), 4));
+idx_frq = tf_frqs > 8 & tf_frqs < 12;
+lat_indices_mu = squeeze(nanmean(lat_indices(:, :, :, idx_frq, :), 4));
 
 figure()
 titles = {'nlo', 'nhi', 'slo', 'shi', 'olo', 'ohi'}
-for cond = 1 : 6
-    subplot(3, 2, cond)
-    pd = squeeze(mean(squeeze(lat_indices(:, cond, 3, :, :)), 1));
-    contourf(tf_time, tf_frqs, pd, 50, 'linecolor','none')
-    colormap('jet')
-    set(gca,'clim', [-0.1, 0.1], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
-    title(titles{cond})
-end
+
+subplot(3, 1, 1)
+pd = squeeze(mean(squeeze(lat_indices(:, [1, 2], 1, :, :)), [1, 2]));
+contourf(tf_time, tf_frqs, pd, 50, 'linecolor','none')
+colormap('jet')
+set(gca,'clim', [-0.2, 0.2], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
+title('veridical')
+
+subplot(3, 1, 2)
+pd = squeeze(mean(squeeze(lat_indices(:, [3, 4], 1, :, :)), [1, 2]));
+contourf(tf_time, tf_frqs, pd, 50, 'linecolor','none')
+colormap('jet')
+set(gca,'clim', [-0.2, 0.2], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
+title('self')
+
+subplot(3, 1, 3)
+pd = squeeze(mean(squeeze(lat_indices(:, [5, 6], 1, :, :)), [1, 2]));
+contourf(tf_time, tf_frqs, pd, 50, 'linecolor','none')
+colormap('jet')
+set(gca,'clim', [-0.2, 0.2], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
+title('other')
+
 
 figure()
-pd = squeeze(mean(lat_indices_mu(:, :, [1, 2, 3], :), [1, 3]));
-plot(tf_time, pd)
-legend({'nlo', 'nhi', 'slo', 'shi', 'olo', 'ohi'});
+pd_self = squeeze(mean(squeeze(lat_indices(:, [3, 4], 2, :, :)), [1, 2]));
+pd_other = squeeze(mean(squeeze(lat_indices(:, [5, 6], 2, :, :)), [1, 2]));
+pd = pd_self - pd_other;
+contourf(tf_time, tf_frqs, pd, 50, 'linecolor','none')
+colormap('jet')
+set(gca,'clim', [-0.02, 0.02], 'YScale', 'log', 'YTick', [4, 8, 12, 20])
+title('diff')
