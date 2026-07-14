@@ -85,8 +85,17 @@ analysis_label = 'error_monitoring_frontal_theta_diff';
 % Posterior electrode patch
 idx_channel = [65, 15, 19, 20, 16]; % frontal midline
 
-idx_time = tf_times >= 100 & tf_times <= 400;
+% Freq idx
 idx_freq = tf_freqs >= 4 & tf_freqs <= 7;
+
+% Get grand average across EVERYTHING (except freq and space...)
+ga = squeeze(mean(error_diffs(:, :, idx_channel, idx_freq, :), [1, 2, 3, 4]));
+
+% Get time idx from ga peak
+[maxamp, maxidx] = max(ga(tf_times > 0 & tf_times < 500));
+maxtime = tf_times(find(tf_times == 0) + maxidx);
+idx_time = tf_times >= (maxtime - 50) & tf_times <= (maxtime + 50);
+
 
 % Average across electrodes in patch
 ersps_patch = squeeze(mean(error_diffs(:, :, idx_channel, :, :), 3));
@@ -110,7 +119,6 @@ xRegion = [tmp(1), tmp(end), tmp(end), tmp(1)];
 yRegion = [min(pd(:)), min(pd(:)), max(pd(:)), max(pd(:))];
 h = patch(xRegion, yRegion, 'black');
 set(h, 'FaceAlpha', 0.1, 'EdgeColor', 'none');
-
 
 % Plot topo
 plotlims = [-max(abs(topovals(:))), max(abs(topovals(:)))];
